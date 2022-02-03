@@ -1,0 +1,210 @@
+{
+  "name": "svd-viewer",
+  "displayName": "SVD Viewer",
+  "description": "Standalone SVD Viewer extension extracted from cortex-debug",
+  "version": "1.0.0",
+  "preview": true,
+  "publisher": "cortex-debug",
+  "author": "Rob Moran <github@thegecko.org>",
+  "license": "MIT",
+  "main": "dist/extension.js",
+  "repository": "https://github.com/thegecko/svd-viewer",
+  "qna": false,
+  "engines": {
+    "vscode": "^1.50.0"
+  },
+  "scripts": {
+    "prepare": "yarn build",
+    "clean": "git clean -f -x ./node_modules ./dist",
+    "build": "tsc && yarn lint",
+    "watch": "tsc -w",
+    "lint": "eslint . --ext .ts,.tsx",
+    "package": "vsce package --yarn"
+  },
+  "dependencies": {
+    "@types/node": "^12.20.0",
+    "@types/vscode": "^1.50.0"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^4.28.0",
+    "@typescript-eslint/parser": "^4.28.0",
+    "eslint": "^7.29.0",
+    "typescript": "^3.9.6",
+    "vsce": "^2.6.4"
+  },
+  "contributes": {
+    "views": {
+      "debug": [
+        {
+          "id": "svd-viewer.svd",
+          "name": "Peripherals",
+          "when": "svd-viewer.svd.hasData"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "svd-viewer.svd.setValue",
+        "title": "Update Value",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "svd-viewer.svd.copyValue",
+        "title": "Copy Value",
+        "icon": "$(files)"
+      },
+      {
+        "command": "svd-viewer.svd.refreshValue",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "svd-viewer.svd.pin",
+        "title": "Pin",
+        "icon": "$(pin)"
+      },
+      {
+        "command": "svd-viewer.svd.unpin",
+        "title": "Unpin",
+        "icon": "$(pinned)"
+      },
+      {
+        "command": "svd-viewer.svd.setFormat",
+        "title": "Set Value Format",
+        "icon": "$(symbol-unit)"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "svd-viewer.svd.setValue",
+          "when": "false"
+        },
+        {
+          "command": "svd-viewer.svd.copyValue",
+          "when": "false"
+        },
+        {
+          "command": "svd-viewer.svd.refreshValue",
+          "when": "false"
+        },
+        {
+          "command": "svd-viewer.svd.pin",
+          "when": "false"
+        },
+        {
+          "command": "svd-viewer.svd.unpin",
+          "when": "false"
+        },
+        {
+          "command": "svd-viewer.svd.setFormat",
+          "when": "false"
+        }
+      ],
+      "touchBar": [
+        {
+          "command": "svd-viewer.svd.refreshValue",
+          "when": "view == svd-viewer.svd && viewItem == registerRW"
+        },
+        {
+          "command": "svd-viewer.svd.refreshValue",
+          "when": "view == svd-viewer.svd && viewItem == register"
+        },
+        {
+          "command": "svd-viewer.svd.refreshValue",
+          "when": "view == svd-viewer.svd && viewItem == registerRO"
+        },
+        {
+          "command": "svd-viewer.svd.refreshValue",
+          "when": "view == svd-viewer.svd && viewItem =~ /peripheral.*/"
+        },
+        {
+          "command": "svd-viewer.svd.pin",
+          "when": "view == svd-viewer.svd && viewItem == peripheral"
+        },
+        {
+          "command": "svd-viewer.svd.unpin",
+          "when": "view == svd-viewer.svd && viewItem == peripheral.pinned"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "svd-viewer.svd.setValue",
+          "when": "view == svd-viewer.svd && viewItem == field",
+          "group": "inline"
+        },
+        {
+          "command": "svd-viewer.svd.setValue",
+          "when": "view == svd-viewer.svd && viewItem == fieldWO",
+          "group": "inline"
+        },
+        {
+          "command": "svd-viewer.svd.setValue",
+          "when": "view == svd-viewer.svd && viewItem == registerRW",
+          "group": "inline"
+        },
+        {
+          "command": "svd-viewer.svd.setValue",
+          "when": "view == svd-viewer.svd && viewItem == registerWO",
+          "group": "inline"
+        },
+        {
+          "command": "svd-viewer.svd.copyValue",
+          "when": "view == svd-viewer.svd && viewItem == field",
+          "group": "inline"
+        },
+        {
+          "command": "svd-viewer.svd.copyValue",
+          "when": "view == svd-viewer.svd && viewItem == registerRW",
+          "group": "inline"
+        },
+        {
+          "command": "svd-viewer.svd.copyValue",
+          "when": "view == svd-viewer.svd && viewItem == registerRO",
+          "group": "inline"
+        },
+        {
+          "command": "svd-viewer.svd.refreshValue",
+          "when": "view == svd-viewer.svd && viewItem == registerRW",
+          "group": "inline"
+        },
+        {
+          "command": "svd-viewer.svd.refreshValue",
+          "when": "view == svd-viewer.svd && viewItem == register",
+          "group": "inline"
+        },
+        {
+          "command": "svd-viewer.svd.refreshValue",
+          "when": "view == svd-viewer.svd && viewItem == registerRO",
+          "group": "inline"
+        },
+        {
+          "command": "svd-viewer.svd.refreshValue",
+          "when": "view == svd-viewer.svd && viewItem =~ /peripheral.*/",
+          "group": "inline"
+        },
+        {
+          "command": "svd-viewer.svd.pin",
+          "when": "view == svd-viewer.svd && viewItem == peripheral",
+          "group": "inline"
+        },
+        {
+          "command": "svd-viewer.svd.unpin",
+          "when": "view == svd-viewer.svd && viewItem == peripheral.pinned",
+          "group": "inline"
+        },
+        {
+          "command": "svd-viewer.svd.setFormat",
+          "when": "view == svd-viewer.svd",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "activationEvents": [
+    "onDebug"
+  ],
+  "extensionKind": [
+    "workspace"
+  ]
+}
