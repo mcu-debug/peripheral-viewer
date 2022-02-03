@@ -17,6 +17,7 @@
  */
 
 import { debug, TreeItem, TreeItemCollapsibleState, ThemeIcon } from 'vscode';
+import type { DebugProtocol } from 'vscode-debugprotocol';
 import { PeripheralBaseNode } from './base-node';
 import { AddrRange, AddressRangesInUse } from './address-ranges';
 import { PeripheralRegisterNode } from './register-node';
@@ -147,12 +148,13 @@ export class PeripheralNode extends PeripheralBaseNode {
     protected async readRangeMemory(r: AddrRange): Promise<void> {
         if (debug.activeDebugSession) {
             const memoryReference = '0x' + r.base.toString(16);
-            const response = await debug.activeDebugSession.customRequest('read-memory', {
+            const request: DebugProtocol.ReadMemoryArguments = {
                 memoryReference,
                 count: r.length
-            });
-            if (response && response.data) {
-                const data = Buffer.from(response.data, 'base64');
+            };
+            const response: DebugProtocol.ReadMemoryResponse = await debug.activeDebugSession.customRequest('readMemory', request);
+            if (response && response.success === true && response.body && response.body.data) {
+                const data = Buffer.from(response.body.data, 'base64');
                 let dst = r.base - this.baseAddress;
                 for (const byte of data) {
                     this.currentValue[dst++] = byte;

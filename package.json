@@ -11,7 +11,7 @@
   "repository": "https://github.com/thegecko/svd-viewer",
   "qna": false,
   "engines": {
-    "vscode": "^1.50.0"
+    "vscode": "^1.63.2"
   },
   "scripts": {
     "prepare": "yarn build",
@@ -23,14 +23,17 @@
   },
   "dependencies": {
     "@types/node": "^12.20.0",
-    "@types/vscode": "^1.50.0"
+    "@types/vscode": "^1.63.2",
+    "xml2js": "^0.4.23"
   },
   "devDependencies": {
+    "@types/xml2js": "^0.4.9",
     "@typescript-eslint/eslint-plugin": "^4.28.0",
     "@typescript-eslint/parser": "^4.28.0",
     "eslint": "^7.29.0",
     "typescript": "^3.9.6",
-    "vsce": "^2.6.4"
+    "vsce": "^2.6.4",
+    "vscode-debugprotocol": "^1.51.0"
   },
   "contributes": {
     "views": {
@@ -199,6 +202,16 @@
           "group": "navigation"
         }
       ]
+    },
+    "configuration": {
+      "title": "SVD Viewer",
+      "properties": {
+        "svd-viewer.svdPathConfig": {
+          "type": "string",
+          "default": "svdPath",
+          "description": "Debug configuration key to use to get the SVD path"
+        }
+      }
     }
   },
   "activationEvents": [

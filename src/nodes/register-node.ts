@@ -17,6 +17,7 @@
  */
 
 import { window, debug, TreeItem, TreeItemCollapsibleState, MarkdownString } from 'vscode';
+import type { DebugProtocol } from 'vscode-debugprotocol';
 import { PeripheralNode } from './peripheral-node';
 import { PeripheralClusterNode } from './cluster-node';
 import { PeripheralBaseNode } from './base-node';
@@ -254,15 +255,19 @@ export class PeripheralRegisterNode extends PeripheralBaseNode {
 
         const data = Buffer.from(bytes).toString('base64');
         if (debug.activeDebugSession) {
-            await debug.activeDebugSession.customRequest('write-memory', {
+            const request: DebugProtocol.WriteMemoryArguments = {
                 memoryReference,
                 data
-            });
-            this.parent.updateData();
-            return true;
-        } else {
-            return false;
+            };
+            const response: DebugProtocol.WriteMemoryResponse = await debug.activeDebugSession.customRequest('writeMemory', request);
+
+            if (response && response.success === true) {
+                this.parent.updateData();
+                return true;
+            }
         }
+
+        return false;
     }
 
     public async updateData(): Promise<void> {

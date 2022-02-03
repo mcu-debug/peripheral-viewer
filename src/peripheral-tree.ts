@@ -50,7 +50,7 @@ export class PeripheralTreeProvider implements TreeDataProvider<PeripheralBaseNo
         return [];
     }
 
-    public async debugSessionStarted(svdData: string | undefined): Promise<void> {
+    public async debugSessionStarted(svdData: string): Promise<void> {
         this.peripherials = [];
         this.loaded = false;
         this._onDidChangeTreeData.fire(undefined);

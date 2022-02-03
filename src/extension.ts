@@ -16,130 +16,131 @@
  * IN THE SOFTWARE.
  */
 
-import { commands, debug, window, env, DebugAdapterTracker, DebugSession, DebugSessionCustomEvent, TreeView, ExtensionContext } from 'vscode';
+import * as vscode from 'vscode';
+import { readFileSync } from 'fs';
+import { parseStringPromise } from 'xml2js';
 import { PeripheralTreeProvider } from './peripheral-tree';
 import { PeripheralBaseNode } from './nodes/base-node';
 import { NumberFormat } from './util';
 
 const EXTENSION_NAME = 'svd-viewer';
+const SVD_PATH_CONFIG = 'svdPathConfig';
 
-class SvdExtension {
-    private peripheralProvider: PeripheralTreeProvider;
-    private peripheralTreeView: TreeView<PeripheralBaseNode>;
+export function activate(context: vscode.ExtensionContext): void {
 
-    constructor(context: ExtensionContext) {
-        this.peripheralProvider = new PeripheralTreeProvider();
+    const peripheralProvider = new PeripheralTreeProvider();
+    const peripheralTreeView = vscode.window.createTreeView(`${EXTENSION_NAME}.svd`, {
+        treeDataProvider: peripheralProvider
+    });
 
-        this.peripheralTreeView = window.createTreeView(`${EXTENSION_NAME}.svd`, {
-            treeDataProvider: this.peripheralProvider
-        });
+    const toggle = (node: PeripheralBaseNode) => {
+        peripheralProvider.togglePinPeripheral(node);
+        peripheralProvider.refresh();
+    };
 
-        context.subscriptions.push(
-            commands.registerCommand(`${EXTENSION_NAME}.svd.setValue`, this.peripheralsUpdateNode.bind(this)),
-            commands.registerCommand(`${EXTENSION_NAME}.svd.copyValue`, this.peripheralsCopyValue.bind(this)),
-            commands.registerCommand(`${EXTENSION_NAME}.svd.refreshValue`, this.peripheralsForceRefresh.bind(this)),
-            commands.registerCommand(`${EXTENSION_NAME}.svd.pin`, this.peripheralsTogglePin.bind(this)),
-            commands.registerCommand(`${EXTENSION_NAME}.svd.unpin`, this.peripheralsTogglePin.bind(this)),
-            commands.registerCommand(`${EXTENSION_NAME}.svd.setFormat`, this.peripheralsSetFormat.bind(this)),
-            debug.onDidReceiveDebugSessionCustomEvent(this.receivedCustomEvent.bind(this)),
-
-            this.peripheralTreeView,
-            this.peripheralTreeView.onDidExpandElement((e) => {
-                e.element.expanded = true;
-                const p = e.element.getPeripheral();
-                if (p) {
-                    p.updateData();
-                    this.peripheralProvider.refresh();
-                }
-            }),
-            this.peripheralTreeView.onDidCollapseElement((e) => {
-                e.element.expanded = false;
-            })
-        );
-
-        // Theia doesn't currently support this faster method
-        if (env.appName === 'Visual Studio Code') {
-            debug.registerDebugAdapterTrackerFactory(`${EXTENSION_NAME}-debug`, {
-                createDebugAdapterTracker: this.createDebugAdapterTracker.bind(this)
-            });
-        } else {
-            context.subscriptions.push(
-                debug.onDidStartDebugSession(this.debugSessionStarted.bind(this)),
-                debug.onDidTerminateDebugSession(this.debugSessionTerminated.bind(this))
-            );
-        }
-    }
-
-    private createDebugAdapterTracker(session: DebugSession): DebugAdapterTracker {
-        return {
-            onWillStartSession: () => this.debugSessionStarted.call(this, session),
-            onWillStopSession: () => this.debugSessionTerminated.call(this, session)
-        };
-    }
-
-    private async peripheralsUpdateNode(node: PeripheralBaseNode): Promise<void> {
-        try {
-            const result = await node.performUpdate();
-            if (result) {
-                this.peripheralsForceRefresh(node);
-            }
-        } catch (error) {
-            window.showErrorMessage(`Unable to update value: ${error.toString()}`);
-        }
-    }
-
-    private peripheralsCopyValue(node: PeripheralBaseNode): void {
-        const cv = node.getCopyValue();
-        if (cv) {
-            env.clipboard.writeText(cv);
-        }
-    }
-
-    private async peripheralsSetFormat(node: PeripheralBaseNode): Promise<void> {
-        const result = await window.showQuickPick([
-            { label: 'Auto', description: 'Automatically choose format (Inherits from parent)', value: NumberFormat.Auto },
-            { label: 'Hex', description: 'Format value in hexidecimal', value: NumberFormat.Hexidecimal },
-            { label: 'Decimal', description: 'Format value in decimal', value: NumberFormat.Decimal },
-            { label: 'Binary', description: 'Format value in binary', value: NumberFormat.Binary }
-        ]);
-        if (result === undefined)
-            return;
-
-        node.format = result.value;
-        this.peripheralProvider.refresh();
-    }
-
-    private async peripheralsForceRefresh(node: PeripheralBaseNode): Promise<void> {
+    const refresh = async (node: PeripheralBaseNode) => {
         const p = node.getPeripheral();
         if (p) {
             await p.updateData();
-            this.peripheralProvider.refresh();
+            peripheralProvider.refresh();
         }
-    }
+    };
 
-    private async peripheralsTogglePin(node: PeripheralBaseNode): Promise<void> {
-        this.peripheralProvider.togglePinPeripheral(node);
-        this.peripheralProvider.refresh();
-    }
+    context.subscriptions.push(
+        peripheralTreeView,
+        peripheralTreeView.onDidExpandElement((e) => {
+            e.element.expanded = true;
+            const p = e.element.getPeripheral();
+            if (p) {
+                p.updateData();
+                peripheralProvider.refresh();
+            }
+        }),
+        peripheralTreeView.onDidCollapseElement((e) => {
+            e.element.expanded = false;
+        }),
 
-    private receivedCustomEvent(e: DebugSessionCustomEvent) {
-        if (e.event === 'custom-stop') {
-            this.peripheralProvider.debugStopped();
-        }
-    }
+        vscode.commands.registerCommand(`${EXTENSION_NAME}.svd.setValue`, async node => {
+            try {
+                const result = await node.performUpdate();
+                if (result) {
+                    refresh(node);
+                }
+            } catch (error) {
+                vscode.window.showErrorMessage(`Unable to update value: ${error.toString()}`);
+            }
+        }),
+        vscode.commands.registerCommand(`${EXTENSION_NAME}.svd.copyValue`, node => {
+            const cv = node.getCopyValue();
+            if (cv) {
+                vscode.env.clipboard.writeText(cv);
+            }
+        }),
+        vscode.commands.registerCommand(`${EXTENSION_NAME}.svd.refreshValue`, node => refresh(node)),
+        vscode.commands.registerCommand(`${EXTENSION_NAME}.svd.pin`, node => toggle(node)),
+        vscode.commands.registerCommand(`${EXTENSION_NAME}.svd.unpin`, node => toggle(node)),
+        vscode.commands.registerCommand(`${EXTENSION_NAME}.svd.setFormat`, async node => {
+            const result = await vscode.window.showQuickPick([
+                { label: 'Auto', description: 'Automatically choose format (Inherits from parent)', value: NumberFormat.Auto },
+                { label: 'Hex', description: 'Format value in hexidecimal', value: NumberFormat.Hexidecimal },
+                { label: 'Decimal', description: 'Format value in decimal', value: NumberFormat.Decimal },
+                { label: 'Binary', description: 'Format value in binary', value: NumberFormat.Binary }
+            ]);
+            if (result === undefined)
+                return;
+
+            node.format = result.value;
+            peripheralProvider.refresh();
+        }),
+        vscode.debug.onDidReceiveDebugSessionCustomEvent(e => {
+            if (e.event === 'custom-stop') {
+                peripheralProvider.debugStopped();
+            }
+        })
+    );
 
     // Debug Events
-    private async debugSessionStarted(session: DebugSession) {
-        const svdData = await session.customRequest('get-svd');
-        commands.executeCommand('setContext', `${EXTENSION_NAME}.svd.hasData`, !!svdData);
-        this.peripheralProvider.debugSessionStarted(svdData || undefined);
-    }
+    const debugSessionStarted = async (session: vscode.DebugSession) => {
+        let svdData: string | undefined;
 
-    private debugSessionTerminated(_session: DebugSession) {
-        this.peripheralProvider.debugSessionTerminated();
-    }
-}
+        const svdConfig = vscode.workspace.getConfiguration(EXTENSION_NAME).get<string>(SVD_PATH_CONFIG);
 
-export function activate(context: ExtensionContext): void {
-    new SvdExtension(context);
+        if (svdConfig) {
+            const svd = session.configuration[svdConfig];
+
+            if (svd) {
+                const xml = readFileSync(svd, 'utf8');
+                svdData = await parseStringPromise(xml);
+            }
+        }
+
+        vscode.commands.executeCommand('setContext', `${EXTENSION_NAME}.svd.hasData`, !!svdData);
+
+        if (svdData) {
+            peripheralProvider.debugSessionStarted(svdData);
+        }
+    };
+
+    const debugSessionTerminated = (_session: vscode.DebugSession) => {
+        peripheralProvider.debugSessionTerminated();
+    };
+
+    const createDebugAdapterTracker = (session: vscode.DebugSession): vscode.DebugAdapterTracker => {
+        return {
+            onWillStartSession: () => debugSessionStarted(session),
+            onWillStopSession: () => debugSessionTerminated(session)
+        };
+    };
+
+    // Some IDEs don't currently support this faster method
+    if (vscode.env.appName === 'Visual Studio Code') {
+        vscode.debug.registerDebugAdapterTrackerFactory('*', {
+            createDebugAdapterTracker: createDebugAdapterTracker
+        });
+    } else {
+        context.subscriptions.push(
+            vscode.debug.onDidStartDebugSession(debugSessionStarted),
+            vscode.debug.onDidTerminateDebugSession(debugSessionTerminated)
+        );
+    }
 }

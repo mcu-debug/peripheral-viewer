@@ -78,15 +78,27 @@
   resolved "https://registry.yarnpkg.com/@types/json-schema/-/json-schema-7.0.9.tgz#97edc9037ea0c38585320b28964dde3b39e4660d"
   integrity sha512-qcUXuemtEu+E5wZSJHNxUXeCZhAfXKQ41D+duX+VYPde7xyEVZci+/oXKJL13tnRs9lR2pr4fod59GT6/X1/yQ==
 
+"@types/node@*":
+  version "17.0.14"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-17.0.14.tgz#33b9b94f789a8fedd30a68efdbca4dbb06b61f20"
+  integrity sha512-SbjLmERksKOGzWzPNuW7fJM7fk3YXVTFiZWB/Hs99gwhk+/dnrQRPBQjPW9aO+fi1tAffi9PrwFvsmOKmDTyng==
+
 "@types/node@^12.20.0":
   version "12.20.43"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-12.20.43.tgz#6cf47894da4a4748c62fccf720ba269e1b1ff5a4"
   integrity sha512-HCfJdaYqJX3BCzeihgZrD7b85Cu05OC/GVJ4kEYIflwUs4jbnUlLLWoq7hw1LBcdvUyehO+gr6P5JQ895/2ZfA==
 
-"@types/vscode@^1.50.0":
+"@types/vscode@^1.63.2":
   version "1.63.2"
   resolved "https://registry.yarnpkg.com/@types/vscode/-/vscode-1.63.2.tgz#1ee18eb7b1c1075b28a08afeb0910db915271613"
   integrity sha512-awvdx4vX7SkMKyvWIlRjycjb4blYRSQI3Bav0YMn+lJLGN6gJgb20urN/dQCv/2ejDu5S6ADEBt6O15DOpIAkg==
+
+"@types/xml2js@^0.4.9":
+  version "0.4.9"
+  resolved "https://registry.yarnpkg.com/@types/xml2js/-/xml2js-0.4.9.tgz#a38267d8c2fe121c96922b12ee3bd89a58a6e20e"
+  integrity sha512-CHiCKIihl1pychwR2RNX5mAYmJDACgFVCMT5OArMaO3erzwXVcBqPcusr+Vl8yeeXukxZqtF8mZioqX+mpjjdw==
+  dependencies:
+    "@types/node" "*"
 
 "@typescript-eslint/eslint-plugin@^4.28.0":
   version "4.33.0"
@@ -1689,6 +1701,11 @@ vsce@^2.6.4:
     xml2js "^0.4.23"
     yauzl "^2.3.1"
     yazl "^2.2.2"
+
+vscode-debugprotocol@^1.51.0:
+  version "1.51.0"
+  resolved "https://registry.yarnpkg.com/vscode-debugprotocol/-/vscode-debugprotocol-1.51.0.tgz#c03168dac778b6c24ce17b3511cb61e89c11b2df"
+  integrity sha512-dzKWTMMyebIMPF1VYMuuQj7gGFq7guR8AFya0mKacu+ayptJfaRuM0mdHCqiOth4FnRP8mPhEroFPx6Ift8wHA==
 
 which@^2.0.1:
   version "2.0.2"
