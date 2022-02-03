@@ -92,11 +92,7 @@ export function activate(context: vscode.ExtensionContext): void {
             node.format = result.value;
             peripheralProvider.refresh();
         }),
-        vscode.debug.onDidReceiveDebugSessionCustomEvent(e => {
-            if (e.event === 'custom-stop') {
-                peripheralProvider.debugStopped();
-            }
-        })
+        vscode.debug.onDidTerminateDebugSession(() => peripheralProvider.debugStopped())
     );
 
     // Debug Events
