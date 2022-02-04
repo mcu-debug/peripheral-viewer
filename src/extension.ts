@@ -91,8 +91,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
             node.format = result.value;
             peripheralProvider.refresh();
-        }),
-        vscode.debug.onDidTerminateDebugSession(() => peripheralProvider.debugStopped())
+        })
     );
 
     // Debug Events
@@ -118,25 +117,30 @@ export function activate(context: vscode.ExtensionContext): void {
     };
 
     const debugSessionTerminated = (_session: vscode.DebugSession) => {
+        vscode.commands.executeCommand('setContext', `${EXTENSION_NAME}.svd.hasData`, false);
         peripheralProvider.debugSessionTerminated();
     };
 
     const createDebugAdapterTracker = (session: vscode.DebugSession): vscode.DebugAdapterTracker => {
         return {
             onWillStartSession: () => debugSessionStarted(session),
-            onWillStopSession: () => debugSessionTerminated(session)
+            onWillStopSession: () => debugSessionTerminated(session),
+            onDidSendMessage: message => {
+                if (message.type === 'event' && message.event === 'stopped') {
+                    peripheralProvider.debugStopped();
+                }
+            }
         };
     };
 
-    // Some IDEs don't currently support this faster method
-    if (vscode.env.appName === 'Visual Studio Code') {
-        vscode.debug.registerDebugAdapterTrackerFactory('*', {
-            createDebugAdapterTracker: createDebugAdapterTracker
-        });
-    } else {
-        context.subscriptions.push(
-            vscode.debug.onDidStartDebugSession(debugSessionStarted),
-            vscode.debug.onDidTerminateDebugSession(debugSessionTerminated)
-        );
-    }
+    vscode.debug.registerDebugAdapterTrackerFactory('*', {
+        createDebugAdapterTracker: createDebugAdapterTracker
+    });
+
+    /* Old method
+    context.subscriptions.push(
+        vscode.debug.onDidStartDebugSession(debugSessionStarted),
+        vscode.debug.onDidTerminateDebugSession(debugSessionTerminated)
+    );
+    */
 }

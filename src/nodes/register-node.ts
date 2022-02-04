@@ -259,12 +259,10 @@ export class PeripheralRegisterNode extends PeripheralBaseNode {
                 memoryReference,
                 data
             };
-            const response: DebugProtocol.WriteMemoryResponse = await debug.activeDebugSession.customRequest('writeMemory', request);
 
-            if (response && response.success === true) {
-                this.parent.updateData();
-                return true;
-            }
+            await debug.activeDebugSession.customRequest('writeMemory', request);
+            this.parent.updateData();
+            return true;
         }
 
         return false;

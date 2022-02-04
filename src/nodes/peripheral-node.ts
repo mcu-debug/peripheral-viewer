@@ -152,8 +152,11 @@ export class PeripheralNode extends PeripheralBaseNode {
                 memoryReference,
                 count: r.length
             };
-            const response: DebugProtocol.ReadMemoryResponse = await debug.activeDebugSession.customRequest('readMemory', request);
-            if (response && response.success === true && response.body && response.body.data) {
+
+            const response: Partial<DebugProtocol.ReadMemoryResponse> = {};
+            response.body = await debug.activeDebugSession.customRequest('readMemory', request);
+
+            if (response.body && response.body.data) {
                 const data = Buffer.from(response.body.data, 'base64');
                 let dst = r.base - this.baseAddress;
                 for (const byte of data) {
