@@ -46,6 +46,45 @@ export function activate(context: vscode.ExtensionContext): void {
         }
     };
 
+    // Debug Events
+    const debugSessionStarted = async (session: vscode.DebugSession) => {
+        let svdData: string | undefined;
+
+        const svdConfig = vscode.workspace.getConfiguration(EXTENSION_NAME).get<string>(SVD_PATH_CONFIG);
+
+        if (svdConfig) {
+            const svd = session.configuration[svdConfig];
+
+            if (svd) {
+                const xml = readFileSync(svd, 'utf8');
+                svdData = await parseStringPromise(xml);
+            }
+        }
+
+        vscode.commands.executeCommand('setContext', `${EXTENSION_NAME}.svd.hasData`, !!svdData);
+
+        if (svdData) {
+            peripheralProvider.debugSessionStarted(svdData);
+        }
+    };
+
+    const debugSessionTerminated = (_session: vscode.DebugSession) => {
+        vscode.commands.executeCommand('setContext', `${EXTENSION_NAME}.svd.hasData`, false);
+        peripheralProvider.debugSessionTerminated();
+    };
+
+    const createDebugAdapterTracker = (session: vscode.DebugSession): vscode.DebugAdapterTracker => {
+        return {
+            onWillStartSession: () => debugSessionStarted(session),
+            onWillStopSession: () => debugSessionTerminated(session),
+            onDidSendMessage: message => {
+                if (message.type === 'event' && message.event === 'stopped') {
+                    peripheralProvider.debugStopped();
+                }
+            }
+        };
+    };
+
     context.subscriptions.push(
         peripheralTreeView,
         peripheralTreeView.onDidExpandElement((e) => {
@@ -91,56 +130,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
             node.format = result.value;
             peripheralProvider.refresh();
-        })
+        }),
+        vscode.debug.registerDebugAdapterTrackerFactory('*', { createDebugAdapterTracker })
     );
-
-    // Debug Events
-    const debugSessionStarted = async (session: vscode.DebugSession) => {
-        let svdData: string | undefined;
-
-        const svdConfig = vscode.workspace.getConfiguration(EXTENSION_NAME).get<string>(SVD_PATH_CONFIG);
-
-        if (svdConfig) {
-            const svd = session.configuration[svdConfig];
-
-            if (svd) {
-                const xml = readFileSync(svd, 'utf8');
-                svdData = await parseStringPromise(xml);
-            }
-        }
-
-        vscode.commands.executeCommand('setContext', `${EXTENSION_NAME}.svd.hasData`, !!svdData);
-
-        if (svdData) {
-            peripheralProvider.debugSessionStarted(svdData);
-        }
-    };
-
-    const debugSessionTerminated = (_session: vscode.DebugSession) => {
-        vscode.commands.executeCommand('setContext', `${EXTENSION_NAME}.svd.hasData`, false);
-        peripheralProvider.debugSessionTerminated();
-    };
-
-    const createDebugAdapterTracker = (session: vscode.DebugSession): vscode.DebugAdapterTracker => {
-        return {
-            onWillStartSession: () => debugSessionStarted(session),
-            onWillStopSession: () => debugSessionTerminated(session),
-            onDidSendMessage: message => {
-                if (message.type === 'event' && message.event === 'stopped') {
-                    peripheralProvider.debugStopped();
-                }
-            }
-        };
-    };
-
-    vscode.debug.registerDebugAdapterTrackerFactory('*', {
-        createDebugAdapterTracker: createDebugAdapterTracker
-    });
-
-    /* Old method
-    context.subscriptions.push(
-        vscode.debug.onDidStartDebugSession(debugSessionStarted),
-        vscode.debug.onDidTerminateDebugSession(debugSessionTerminated)
-    );
-    */
 }
