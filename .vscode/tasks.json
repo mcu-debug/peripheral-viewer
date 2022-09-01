@@ -10,7 +10,7 @@
 			},
 			"problemMatcher": [],
 			"label": "npm: watch",
-			"detail": "tsc -w"
+			"detail": "webpack -w"
 		}
 	]
 }

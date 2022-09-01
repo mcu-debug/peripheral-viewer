@@ -1,5 +1,5 @@
 .github
 .vscode
-scripts
+node_modules
 src
 *.vsix

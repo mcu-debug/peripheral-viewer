@@ -1,32 +1,33 @@
-/*
- * Copyright 2017-2019 Marcel Ball
- * https://github.com/Marus/cortex-debug
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
- * documentation files (the "Software"), to deal in the Software without restriction, including without
- * limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
- * Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
- * TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
- * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
- * CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
- * IN THE SOFTWARE.
- */
-
-import { window, debug, ProviderResult, TreeItem, TreeDataProvider, EventEmitter, Event } from 'vscode';
+import * as vscode from 'vscode';
+import * as manifest from './manifest';
 import { PeripheralBaseNode } from './nodes/base-node';
 import { PeripheralNode } from './nodes/peripheral-node';
 import { SVDParser } from './svd-parser';
 
-export class PeripheralTreeProvider implements TreeDataProvider<PeripheralBaseNode> {
-    public _onDidChangeTreeData: EventEmitter<PeripheralBaseNode | undefined> = new EventEmitter<PeripheralBaseNode | undefined>();
-    public readonly onDidChangeTreeData: Event<PeripheralBaseNode | undefined> = this._onDidChangeTreeData.event;
+export class PeripheralTree implements vscode.TreeDataProvider<PeripheralBaseNode> {
+    public _onDidChangeTreeData: vscode.EventEmitter<PeripheralBaseNode | undefined> = new vscode.EventEmitter<PeripheralBaseNode | undefined>();
+    public readonly onDidChangeTreeData: vscode.Event<PeripheralBaseNode | undefined> = this._onDidChangeTreeData.event;
 
     private peripherials: PeripheralNode[] = [];
     private loaded = false;
+
+    public async activate(context: vscode.ExtensionContext): Promise<void> {
+        const view = vscode.window.createTreeView(`${manifest.PACKAGE_NAME}.svd`, { treeDataProvider: this });
+        context.subscriptions.push(
+            view,
+            view.onDidExpandElement((e) => {
+                e.element.expanded = true;
+                const p = e.element.getPeripheral();
+                if (p) {
+                    p.updateData();
+                    this.refresh();
+                }
+            }),
+            view.onDidCollapseElement((e) => {
+                e.element.expanded = false;
+            })
+        );
+    }
 
     private async loadSVD(SVDData: string): Promise<void> {
         const peripherals = await SVDParser.parseSVD(SVDData);
@@ -38,11 +39,11 @@ export class PeripheralTreeProvider implements TreeDataProvider<PeripheralBaseNo
         this._onDidChangeTreeData.fire(undefined);
     }
 
-    public getTreeItem(element: PeripheralBaseNode): TreeItem | Promise<TreeItem> {
+    public getTreeItem(element: PeripheralBaseNode): vscode.TreeItem | Promise<vscode.TreeItem> {
         return element.getTreeItem();
     }
 
-    public getChildren(element?: PeripheralBaseNode): ProviderResult<PeripheralBaseNode[]> {
+    public getChildren(element?: PeripheralBaseNode): vscode.ProviderResult<PeripheralBaseNode[]> {
         if (this.loaded && this.peripherials.length > 0) {
             return element ? element.getChildren() : this.peripherials;
         }
@@ -64,9 +65,9 @@ export class PeripheralTreeProvider implements TreeDataProvider<PeripheralBaseNo
                 this.loaded = false;
                 this._onDidChangeTreeData.fire(undefined);
                 const msg = `Unable to parse SVD file: ${e.toString()}`;
-                window.showErrorMessage(msg);
-                if (debug.activeDebugConsole) {
-                    debug.activeDebugConsole.appendLine(msg);
+                vscode.window.showErrorMessage(msg);
+                if (vscode.debug.activeDebugConsole) {
+                    vscode.debug.activeDebugConsole.appendLine(msg);
                 }
             }
         }

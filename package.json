@@ -2,38 +2,52 @@
   "name": "svd-viewer",
   "displayName": "SVD Viewer",
   "description": "Standalone SVD Viewer extension extracted from cortex-debug",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "preview": true,
   "publisher": "cortex-debug",
   "author": "Rob Moran <github@thegecko.org>",
   "license": "MIT",
-  "main": "dist/extension.js",
+  "main": "dist/desktop/extension.js",
+  "browser": "dist/browser/extension.js",
   "repository": "https://github.com/thegecko/svd-viewer",
   "qna": false,
   "engines": {
     "vscode": "^1.63.2"
   },
+  "categories": [
+    "Debuggers"
+  ],
   "scripts": {
     "prepare": "yarn build",
     "clean": "git clean -f -x ./node_modules ./dist",
-    "build": "tsc && yarn lint",
-    "watch": "tsc -w",
+    "build": "webpack --mode production && yarn lint",
+    "watch": "webpack -w",
     "lint": "eslint . --ext .ts,.tsx",
-    "package": "vsce package --yarn"
+    "package": "vsce package --yarn",
+    "browser": "vscode-test-web --extensionDevelopmentPath=.",
+    "serve": "serve --cors -p 9000"
   },
   "dependencies": {
-    "@types/node": "^12.20.0",
-    "@types/vscode": "^1.63.2",
     "xml2js": "^0.4.23"
   },
   "devDependencies": {
+    "@types/node": "^12.20.0",
+    "@types/vscode": "^1.63.2",
     "@types/xml2js": "^0.4.9",
     "@typescript-eslint/eslint-plugin": "^4.28.0",
     "@typescript-eslint/parser": "^4.28.0",
+    "@vscode/test-web": "^0.0.24",
+    "buffer": "^6.0.3",
     "eslint": "^7.29.0",
+    "serve": "^14.0.1",
+    "stream-browserify": "^3.0.0",
+    "timers-browserify": "^2.0.12",
+    "ts-loader": "^9.2.6",
     "typescript": "^3.9.6",
     "vsce": "^2.6.4",
-    "vscode-debugprotocol": "^1.51.0"
+    "vscode-debugprotocol": "^1.51.0",
+    "webpack": "^5.70.0",
+    "webpack-cli": "4.9.1"
   },
   "contributes": {
     "views": {
@@ -215,9 +229,11 @@
     }
   },
   "activationEvents": [
-    "onDebug"
+    "onDebug",
+    "onStartupFinished"
   ],
   "extensionKind": [
-    "workspace"
+    "workspace",
+    "ui"
   ]
 }
