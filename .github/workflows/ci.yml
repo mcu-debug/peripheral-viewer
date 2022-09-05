@@ -45,8 +45,21 @@ jobs:
       - uses: actions/download-artifact@v2
         with:
           path: artifacts
-      - uses: docker://antonyurchenko/git-release:v4
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: softprops/action-gh-release@v1
         with:
-          args: artifacts/*/*.vsix
+          files: artifacts/*/*.vsix
+
+  publish:
+    needs: build
+    name: Publish
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@v2
+        with:
+          path: artifacts
+      - name: Publish
+        run: |
+          npx ovsx publish -i artifacts/*/*.vsix -p ${{secrets.OPEN_VSX_TOKEN}}
+          npx vsce publish -i artifacts/*/*.vsix -p ${{secrets.VS_MARKETPLACE_TOKEN}}
