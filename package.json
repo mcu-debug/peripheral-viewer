@@ -2,7 +2,7 @@
   "name": "svd-viewer",
   "displayName": "SVD Viewer",
   "description": "Standalone SVD Viewer extension extracted from cortex-debug",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "preview": true,
   "publisher": "cortex-debug",
   "author": "Rob Moran <github@thegecko.org>",
