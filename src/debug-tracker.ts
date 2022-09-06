@@ -3,6 +3,8 @@ import * as manifest from './manifest';
 import { parseStringPromise } from 'xml2js';
 import { PeripheralTree } from './peripheral-tree';
 
+const CORTEX_EXTENSION = 'marus25.cortex-debug';
+
 const pathToUri = (path: string): vscode.Uri => {
     try {
         return vscode.Uri.file(path);
@@ -37,8 +39,26 @@ export class DebugTracker {
         let svdData: string | undefined;
 
         const svdConfig = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<string>(manifest.CONFIG_SVD_PATH) || manifest.DEFAULT_SVD_PATH;
+        let svd = session.configuration[svdConfig];
 
-        const svd = session.configuration[svdConfig];
+        if (!svd) {
+            // Try loading from device support pack
+            try {
+                const deviceConfig = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<string>(manifest.CONFIG_DEVICE) || manifest.DEFAULT_DEVICE;
+                const device = session.configuration[deviceConfig];
+
+                if (device) {
+                    const cortexDebug = vscode.extensions.getExtension(CORTEX_EXTENSION);
+                    if (cortexDebug) {
+                        const cdbg = await cortexDebug.activate();
+                        svd = cdbg.getSVDFile(device);
+                    }
+                }
+            } catch(e) {
+                // eslint-disable-next-line no-console
+                console.warn(e);
+            }
+        }
 
         if (svd) {
             try {

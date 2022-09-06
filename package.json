@@ -225,6 +225,11 @@
           "type": "string",
           "default": "svdPath",
           "description": "Debug configuration key to use to get the SVD path"
+        },
+        "svd-viewer.deviceConfig": {
+          "type": "string",
+          "default": "device",
+          "description": "Debug configuration key to use to get the device"
         }
       }
     }
