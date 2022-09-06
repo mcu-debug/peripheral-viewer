@@ -13,6 +13,22 @@ const pathToUri = (path: string): vscode.Uri => {
     }
 };
 
+const readFromUrl = async (url: string): Promise<Response> => {
+    // Download using fetch
+    if (!globalThis.fetch) {
+        globalThis.fetch = require('node-fetch').default;
+    }
+
+    const response = await fetch(url);
+    if (!response.ok) {
+        const body = await response.text();
+        const msg = `Request to ${url} failed. Status="${response.status}". Body="${body}".`;
+        throw new Error(msg);
+    }
+
+    return response;
+};
+
 export class DebugTracker {
     public constructor(protected tree: PeripheralTree) {
     }
@@ -62,12 +78,21 @@ export class DebugTracker {
 
         if (svd) {
             try {
-                const uri = pathToUri(svd);
-                const contents = await vscode.workspace.fs.readFile(uri);
+                let contents: ArrayBuffer | undefined;
 
-                const decoder = new TextDecoder();
-                const xml = decoder.decode(contents);
-                svdData = await parseStringPromise(xml);
+                if (svd.startsWith('http')) {
+                    const response = await readFromUrl(svd);
+                    contents = await response.arrayBuffer();
+                } else {
+                    const uri = pathToUri(svd);
+                    contents = await vscode.workspace.fs.readFile(uri);
+                }
+
+                if (contents) {
+                    const decoder = new TextDecoder();
+                    const xml = decoder.decode(contents);
+                    svdData = await parseStringPromise(xml);
+                }
             } catch(e) {
                 // eslint-disable-next-line no-console
                 console.warn(e);
