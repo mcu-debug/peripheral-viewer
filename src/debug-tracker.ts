@@ -15,10 +15,6 @@ const pathToUri = (path: string): vscode.Uri => {
 
 const readFromUrl = async (url: string): Promise<Response> => {
     // Download using fetch
-    if (!globalThis.fetch) {
-        globalThis.fetch = require('node-fetch').default;
-    }
-
     const response = await fetch(url);
     if (!response.ok) {
         const body = await response.text();

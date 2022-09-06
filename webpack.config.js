@@ -38,7 +38,12 @@ module.exports = [
         },
         resolve: {
             extensions: ['.tsx', '.ts', '.js']
-        }
+        },
+        plugins: [
+            new webpack.ProvidePlugin({
+                fetch: ['node-fetch', 'default']
+            })
+        ],
     },
     {
         ...common,

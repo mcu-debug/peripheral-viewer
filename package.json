@@ -29,6 +29,7 @@
     "serve": "serve --cors -p 9000"
   },
   "dependencies": {
+    "node-fetch": "^2.6.7",
     "xml2js": "^0.4.23"
   },
   "devDependencies": {
