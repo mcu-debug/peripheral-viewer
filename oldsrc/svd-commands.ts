@@ -17,7 +17,7 @@
  */
 
 import * as vscode from 'vscode';
-import * as manifest from './manifest';
+import * as manifest from '../src/manifest';
 import { PeripheralBaseNode } from './nodes/base-node';
 import { PeripheralTree } from './peripheral-tree';
 import { NumberFormat } from './util';

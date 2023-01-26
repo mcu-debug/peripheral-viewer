@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import * as manifest from './manifest';
+import * as manifest from '../src/manifest';
 import { parseStringPromise } from 'xml2js';
 import { PeripheralTree } from './peripheral-tree';
 
