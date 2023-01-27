@@ -30,7 +30,6 @@ import { DebugTracker } from '../debug-tracker';
 import { SvdRegistry } from '../svd-registry';
 
 const STATE_FILENAME = '.svd-viewer.state.json';
-const SVD_THRESH_ARG = 'svdAddrGapThreshold';
 
 const pathToUri = (path: string): vscode.Uri => {
     try {
@@ -117,7 +116,7 @@ export class PeripheralTreeForSession extends PeripheralBaseNode {
         return state;
     }
 
-    private async loadSVD(svd: string, gapThreshold = 16): Promise<void> {
+    private async loadSVD(svd: string, gapThreshold: number): Promise<void> {
         let svdData: string | undefined;
 
         try {
@@ -355,7 +354,11 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
         });
 
         this.sessionPeripheralsMap.set(session.id, regs);
-        const thresh = session.configuration[SVD_THRESH_ARG];
+        let thresh = session.configuration[manifest.CONFIG_ADDRGAP];
+
+        if (!thresh) {
+            thresh = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<number>(manifest.CONFIG_ADDRGAP) || manifest.DEFAULT_ADDRGAP;
+        }
 
         try {
             await regs.sessionStarted(svd, thresh);     // Should never reject

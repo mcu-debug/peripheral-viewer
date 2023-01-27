@@ -258,7 +258,7 @@ export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
         if (!vscode.debug.activeDebugSession) {
             return false;
         }
-        
+
         await MemReadUtils.writeMemory(vscode.debug.activeDebugSession, this.parent.getAddress(this.offset), value, this.size);
         await this.parent.updateData();
         return true;

@@ -21,3 +21,5 @@ export const CONFIG_SVD_PATH = 'svdPathConfig';
 export const DEFAULT_SVD_PATH = 'svdPath';
 export const CONFIG_DEVICE = 'deviceConfig';
 export const DEFAULT_DEVICE = 'device';
+export const CONFIG_ADDRGAP = 'svdAddrGapThreshold';
+export const DEFAULT_ADDRGAP = 16;

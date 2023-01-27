@@ -68,7 +68,7 @@ interface SvdData {
 export class SVDParser {
     private static enumTypeValuesMap: { [key: string]: any } = {};
     private static peripheralRegisterMap: { [key: string]: any } = {};
-    private static gapThreshold = 16;
+    private static gapThreshold: number;
 
     public static async parseSVD(
         session: vscode.DebugSession, svdData: SvdData, gapThreshold: number): Promise<PeripheralNode[]> {
