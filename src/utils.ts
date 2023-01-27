@@ -1,4 +1,4 @@
-export function hexFormat(value: number, padding: number = 8, includePrefix: boolean = true): string {
+export function hexFormat(value: number, padding = 8, includePrefix = true): string {
     let base = (value >>> 0).toString(16);
     base = base.padStart(padding, '0');
     return includePrefix ? '0x' + base : base;
@@ -22,7 +22,7 @@ export function binaryFormat(value: number, padding = 0, includePrefix = true, g
     return includePrefix ? '0b' + base : base;
 }
 
-export function createMask(offset: number, width: number) {
+export function createMask(offset: number, width: number): number {
     let r = 0;
     const a = offset;
     const b = offset + width - 1;
@@ -30,7 +30,7 @@ export function createMask(offset: number, width: number) {
     return r;
 }
 
-export function extractBits(value: number, offset: number, width: number) {
+export function extractBits(value: number, offset: number, width: number): number {
     const mask = createMask(offset, width);
     const bvalue = ((value & mask) >>> offset) >>> 0;
     return bvalue;
@@ -39,16 +39,14 @@ export function extractBits(value: number, offset: number, width: number) {
 export function parseInteger(value: string): number | undefined {
     if ((/^0b([01]+)$/i).test(value)) {
         return parseInt(value.substring(2), 2);
-    }
-    else if ((/^0x([0-9a-f]+)$/i).test(value)) {
+    } else if ((/^0x([0-9a-f]+)$/i).test(value)) {
         return parseInt(value.substring(2), 16);
-    }
-    else if ((/^[0-9]+/i).test(value)) {
+    } else if ((/^[0-9]+/i).test(value)) {
         return parseInt(value, 10);
-    }
-    else if ((/^#[0-1]+/i).test(value)) {
+    } else if ((/^#[0-1]+/i).test(value)) {
         return parseInt(value.substring(1), 2);
     }
+
     return undefined;
 }
 
@@ -61,7 +59,7 @@ export function parseDimIndex(spec: string, count: number): string[] {
         return components;
     }
 
-    if (/^([0-9]+)\-([0-9]+)$/i.test(spec)) {
+    if (/^([0-9]+)-([0-9]+)$/i.test(spec)) {
         const parts = spec.split('-').map((p) => parseInteger(p));
         const start = parts[0];
         const end = parts[1];
@@ -83,7 +81,7 @@ export function parseDimIndex(spec: string, count: number): string[] {
         return components;
     }
 
-    if (/^[a-zA-Z]\-[a-zA-Z]$/.test(spec)) {
+    if (/^[a-zA-Z]-[a-zA-Z]$/.test(spec)) {
         const start = spec.charCodeAt(0);
         const end = spec.charCodeAt(2);
 

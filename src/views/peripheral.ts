@@ -5,7 +5,7 @@ import { parseStringPromise } from 'xml2js';
 import { NodeSetting } from '../common';
 import { BaseNode, PeripheralBaseNode } from './nodes/basenode';
 import { PeripheralNode } from './nodes/peripheralnode';
-import { SVDParser } from '../svd';
+import { SVDParser } from '../svd-parser';
 import { MessageNode } from './nodes/messagenode';
 import { AddrRange } from '../addrranges';
 import { DebugTracker } from '../debug-tracker';
@@ -37,8 +37,8 @@ const readFromUrl = async (url: string): Promise<Response> => {
 export class PeripheralTreeForSession extends PeripheralBaseNode {
     public myTreeItem: vscode.TreeItem;
     private peripherials: PeripheralNode[] = [];
-    private loaded: boolean = false;
-    private errMessage: string = 'No SVD file loaded';
+    private loaded = false;
+    private errMessage = 'No SVD file loaded';
     private wsFolderPath: vscode.Uri | undefined;
 
     constructor(
@@ -98,8 +98,8 @@ export class PeripheralTreeForSession extends PeripheralBaseNode {
 
         return state;
     }
-    
-    private async loadSVD(svd: string, gapThreshold: number = 16): Promise<void> {
+
+    private async loadSVD(svd: string, gapThreshold = 16): Promise<void> {
         let svdData: string | undefined;
 
         try {
@@ -138,17 +138,17 @@ export class PeripheralTreeForSession extends PeripheralBaseNode {
 
         try {
             this.peripherials = await SVDParser.parseSVD(this.session, JSON.parse(svdData), gapThreshold);
-            this.loaded = true;    
+            this.loaded = true;
         } catch(e) {
             this.peripherials = [];
-            this.loaded = false;    
+            this.loaded = false;
             throw e;
         }
 
         this.errMessage = '';
     }
 
-    public performUpdate(): Thenable<any> {
+    public performUpdate(): Thenable<boolean> {
         throw new Error('Method not implemented.');
     }
 
@@ -164,11 +164,11 @@ export class PeripheralTreeForSession extends PeripheralBaseNode {
         throw new Error('Method not implemented.');
     }
 
-    public collectRanges(ary: AddrRange[]): void {
+    public collectRanges(_ary: AddrRange[]): void {
         throw new Error('Method not implemented.');
     }
 
-    public findByPath(path: string[]): PeripheralBaseNode {
+    public findByPath(_path: string[]): PeripheralBaseNode {
         throw new Error('Method not implemented.');     // Shouldn't be called
     }
 
@@ -176,7 +176,7 @@ export class PeripheralTreeForSession extends PeripheralBaseNode {
         const pathParts = path.split('.');
         const peripheral = this.peripherials.find((p) => p.name === pathParts[0]);
         if (!peripheral) { return undefined; }
-        
+
         return peripheral.findByPath(pathParts.slice(1));
     }
 
@@ -212,7 +212,7 @@ export class PeripheralTreeForSession extends PeripheralBaseNode {
 
         this.peripherials = [];
         this.fireCb();
-        
+
         try {
             await this.loadSVD(svd, thresh);
 
@@ -239,12 +239,12 @@ export class PeripheralTreeForSession extends PeripheralBaseNode {
         }
     }
 
-    public sessionTerminated() {
+    public sessionTerminated(): void {
         const state = this.saveState();
         this.saveSvdState(state);
     }
 
-    public togglePinPeripheral(node: PeripheralBaseNode) {
+    public togglePinPeripheral(node: PeripheralBaseNode): void {
         node.pinned = !node.pinned;
         this.peripherials.sort(PeripheralNode.compare);
     }
@@ -363,7 +363,7 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
         vscode.commands.executeCommand('setContext', `${manifest.PACKAGE_NAME}.svd.hasData`, this.sessionPeripheralsMap.size > 0);
     }
 
-    public togglePinPeripheral(node: PeripheralBaseNode) {
+    public togglePinPeripheral(node: PeripheralBaseNode): void {
         const session = vscode.debug.activeDebugSession;
         if (session) {
             const regs = this.sessionPeripheralsMap.get(session.id);

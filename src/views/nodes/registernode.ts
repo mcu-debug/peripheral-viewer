@@ -17,8 +17,8 @@ export class RegisterNode extends BaseNode {
 
     constructor(public name: string, public index: number) {
         super();
-        
-        this.name = this.name;
+
+        this.name = name;
 
         if (name.toUpperCase() === 'XPSR' || name.toUpperCase() === 'CPSR') {
             this.fields = [
@@ -33,8 +33,7 @@ export class RegisterNode extends BaseNode {
                 new FieldNode('ICI/IT', 10, 6, this),
                 new FieldNode('Thumb State (T)', 24, 1, this)
             ];
-        }
-        else if (name.toUpperCase() === 'CONTROL') {
+        } else if (name.toUpperCase() === 'CONTROL') {
             this.fields = [
                 new FieldNode('FPCA', 2, 1, this),
                 new FieldNode('SPSEL', 1, 1, this),
@@ -55,7 +54,7 @@ export class RegisterNode extends BaseNode {
         const state = this.fields && this.fields.length > 0 ?
             (this.expanded ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.Collapsed)
             : TreeItemCollapsibleState.None;
-        
+
         const label: TreeItemLabel = {
             label: this.name + ' ' + this.currentNaturalValue
         };
@@ -63,7 +62,7 @@ export class RegisterNode extends BaseNode {
             label.highlights = [[this.name.length + 1, label.label.length]];
         }
         this.prevNaturalValue = this.currentNaturalValue;
-        
+
         const item = new TreeItem(label, state);
         // item.description = this.currentNaturalValue;
         item.contextValue = 'register';
@@ -78,7 +77,7 @@ export class RegisterNode extends BaseNode {
         return this.fields;
     }
 
-    public setValue(newValue: string) {
+    public setValue(newValue: string): void {
         this.currentNaturalValue = newValue;
         if (this.name.toUpperCase() === 'CONTROL' || this.name.toUpperCase() === 'XPSR' || this.name.toUpperCase() === 'CPSR') {
             if (this.currentNaturalValue.startsWith('0x')) {

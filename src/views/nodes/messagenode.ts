@@ -4,7 +4,7 @@ import { AddrRange } from '../../addrranges';
 import { NodeSetting } from '../../common';
 
 export class MessageNode extends PeripheralBaseNode {
-    
+
     constructor(public message: string, public tooltip?: string | MarkdownString) {
         super();
     }
@@ -25,7 +25,7 @@ export class MessageNode extends PeripheralBaseNode {
         return undefined;
     }
 
-    public performUpdate(): Thenable<any> {
+    public performUpdate(): Thenable<boolean> {
         return Promise.resolve(false);
     }
 
@@ -37,14 +37,15 @@ export class MessageNode extends PeripheralBaseNode {
         return undefined;
     }
 
-    public collectRanges(ary: AddrRange[]): void {
+    public collectRanges(_ary: AddrRange[]): void {
+        // Do nothing
     }
 
-    public saveState(path?: string): NodeSetting[] {
+    public saveState(_path?: string): NodeSetting[] {
         return [];
     }
 
-    public findByPath(path: string[]): PeripheralBaseNode | undefined {
+    public findByPath(_path: string[]): PeripheralBaseNode | undefined {
         return undefined;
     }
 }

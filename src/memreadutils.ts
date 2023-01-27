@@ -6,12 +6,12 @@ export class MemReadUtils {
     /**
      * Make one or more memory reads and update values. For the caller, it should look like a single
      * memory read but, if one read fails, all reads are considered as failed.
-     * 
+     *
      * @param startAddr The start address of the memory region. Everything else is relative to `startAddr`
      * @param specs The chunks of memory to read and and update. Addresses should be >= `startAddr`, Can have gaps, overlaps, etc.
      * @param storeTo This is where read-results go. The first element represents item at `startAddr`
      */
-    public static readMemoryChunks(
+    public static async readMemoryChunks(
         session: vscode.DebugSession, startAddr: number, specs: AddrRange[], storeTo: number[]): Promise<boolean> {
         const promises = specs.map((r) => {
             return new Promise((resolve, reject) => {
@@ -34,20 +34,19 @@ export class MemReadUtils {
             });
         });
 
-        return new Promise(async (resolve, reject) => {
-            const results = await Promise.all(promises.map((p) => p.catch((e) => e)));
-            const errs: string[] = [];
-            results.map((e) => {
-                if (e instanceof Error) {
-                    errs.push(e.message);
-                }
-            });
-            if (errs.length !== 0) {
-                reject(new Error(errs.join('\n')));
-            } else {
-                resolve(true);
+        const results = await Promise.all(promises.map((p) => p.catch((e) => e)));
+        const errs: string[] = [];
+        results.map((e) => {
+            if (e instanceof Error) {
+                errs.push(e.message);
             }
         });
+
+        if (errs.length !== 0) {
+            throw new Error(errs.join('\n'));
+        }
+
+        return true;
     }
 
     public static readMemory(

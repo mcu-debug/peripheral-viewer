@@ -3,7 +3,7 @@ import { PeripheralNode } from './peripheralnode';
 import { PeripheralClusterNode } from './peripheralclusternode';
 import { ClusterOrRegisterBaseNode, PeripheralBaseNode } from './basenode';
 import { PeripheralFieldNode } from './peripheralfieldnode';
-import { AccessType } from '../../svd';
+import { AccessType } from '../../svd-parser';
 import { extractBits, createMask, hexFormat, binaryFormat } from '../../utils';
 import { NumberFormat, NodeSetting } from '../../common';
 import { AddrRange } from '../../addrranges';
@@ -25,17 +25,17 @@ export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
     public readonly accessType: AccessType;
     public readonly size: number;
     public readonly resetValue: number;
-    
+
     private maxValue: number;
     private hexLength: number;
     private hexRegex: RegExp;
     private binaryRegex: RegExp;
     private currentValue: number;
-    private prevValue: string = '';
-    
+    private prevValue = '';
+
     constructor(public parent: PeripheralNode | PeripheralClusterNode, options: PeripheralRegisterOptions) {
         super(parent);
-        
+
         this.name = options.name;
         this.description = options.description;
         this.offset = options.addressOffset;
@@ -45,7 +45,7 @@ export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
         this.currentValue = this.resetValue;
 
         this.hexLength = Math.ceil(this.size / 4);
-        
+
         this.maxValue = Math.pow(2, this.size);
         this.binaryRegex = new RegExp(`^0b[01]{1,${this.size}}$`, 'i');
         this.hexRegex = new RegExp(`^0x[0-9a-f]{1,${this.hexLength}}$`, 'i');
@@ -53,7 +53,7 @@ export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
         this.parent.addChild(this);
     }
 
-    public reset() {
+    public reset(): void {
         this.currentValue = this.resetValue;
     }
 
@@ -66,8 +66,7 @@ export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
             const limit = Math.pow(2, width);
             if (value > limit) {
                 return reject(`Value entered is invalid. Maximum value for this field is ${limit - 1} (${hexFormat(limit - 1, 0)})`);
-            }
-            else {
+            } else {
                 const mask = createMask(offset, width);
                 const sv = value << offset;
                 const newval = (this.currentValue & ~mask) | sv;
@@ -113,7 +112,7 @@ export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
         if (this.accessType !== AccessType.WriteOnly) {
             mds.appendMarkdown(`**Reset Value:** ${ this.getFormattedResetValue(this.getFormat()) }\n`);
         }
-        
+
         mds.appendMarkdown('\n____\n\n');
         if (this.description) {
             mds.appendMarkdown(this.description);
@@ -129,7 +128,7 @@ export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
         const hex = this.getFormattedValue(NumberFormat.Hexadecimal);
         const decimal = this.getFormattedValue(NumberFormat.Decimal);
         const binary = this.getFormattedValue(NumberFormat.Binary);
-        
+
         mds.appendMarkdown('| Hex &nbsp;&nbsp; | Decimal &nbsp;&nbsp; | Binary &nbsp;&nbsp; |\n');
         mds.appendMarkdown('|:---|:---|:---|\n');
         mds.appendMarkdown(`| ${ hex } &nbsp;&nbsp; | ${ decimal } &nbsp;&nbsp; | ${ binary } &nbsp;&nbsp; |\n\n`);
@@ -180,19 +179,22 @@ export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
         return this.children || [];
     }
 
-    public setChildren(children: PeripheralFieldNode[]) {
+    public setChildren(children: PeripheralFieldNode[]): void {
         this.children = children.slice(0, children.length);
         this.children.sort((f1, f2) => f1.offset > f2.offset ? 1 : -1);
     }
 
-    public addChild(child: PeripheralFieldNode) {
+    public addChild(child: PeripheralFieldNode): void {
         this.children.push(child);
         this.children.sort((f1, f2) => f1.offset > f2.offset ? 1 : -1);
     }
 
     public getFormat(): NumberFormat {
-        if (this.format !== NumberFormat.Auto) { return this.format; }
-        else { return this.parent.getFormat(); }
+        if (this.format !== NumberFormat.Auto) {
+            return this.format;
+        } else {
+            return this.parent.getFormat();
+        }
     }
 
     public getCopyValue(): string {
@@ -213,9 +215,11 @@ export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
         }
 
         let numval: number;
-        if (val.match(this.hexRegex)) { numval = parseInt(val.substr(2), 16); }
-        else if (val.match(this.binaryRegex)) { numval = parseInt(val.substr(2), 2); }
-        else if (val.match(/^[0-9]+/)) {
+        if (val.match(this.hexRegex)) {
+            numval = parseInt(val.substr(2), 16);
+        } else if (val.match(this.binaryRegex)) {
+            numval = parseInt(val.substr(2), 2);
+        } else if (val.match(/^[0-9]+/)) {
             numval = parseInt(val, 10);
             if (numval >= this.maxValue) {
                 throw new Error(`Value entered (${numval}) is greater than the maximum value of ${this.maxValue}`);
@@ -231,7 +235,7 @@ export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
         return this.parent.getAddress(this.offset);
     }
 
-    private updateValueInternal(value: number): Thenable<boolean> {
+    private async updateValueInternal(value: number): Promise<boolean> {
         const address = this.parent.getAddress(this.offset);
         const bytes: string[] = [];
         const numbytes = this.size / 8;
@@ -244,14 +248,13 @@ export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
             bytes[i] = bs;
         }
 
-        return new Promise((resolve, reject) => {
-            if (debug.activeDebugSession) {
-                debug.activeDebugSession.customRequest('write-memory', { address: address, data: bytes.join('') }).then((result) => {
-                    this.parent.updateData().then(() => {}, () => {});
-                    resolve(true);
-                }, reject);
-            }
-        });
+        if (debug.activeDebugSession) {
+            await debug.activeDebugSession.customRequest('write-memory', { address: address, data: bytes.join('') });
+            await this.parent.updateData();
+            return true;
+        }
+
+        return false;
     }
 
     public updateData(): Thenable<boolean> {
@@ -292,12 +295,14 @@ export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
     }
 
     public findByPath(path: string[]): PeripheralBaseNode | undefined {
-        if (path.length === 0) { return this; }
-        else if (path.length === 1) {
+        if (path.length === 0) {
+            return this;
+        } else if (path.length === 1) {
             const child = this.children.find((c) => c.name === path[0]);
             return child;
+        } else {
+            return undefined;
         }
-        else { return undefined; }
     }
 
     public getPeripheral(): PeripheralBaseNode {

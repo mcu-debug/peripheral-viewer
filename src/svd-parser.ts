@@ -5,6 +5,8 @@ import { PeripheralNode } from './views/nodes/peripheralnode';
 import { parseInteger, parseDimIndex } from './utils';
 import { PeripheralFieldNode, EnumerationMap, EnumeratedValue } from './views/nodes/peripheralfieldnode';
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 export enum AccessType {
     ReadOnly = 1,
     ReadWrite,
@@ -83,7 +85,7 @@ export class SVDParser {
             const element = peripheralMap[key];
             if (element.$ && element.$.derivedFrom) {
                 const base = peripheralMap[element.$.derivedFrom];
-                peripheralMap[key] = {...base, ...element};
+                peripheralMap[key] = { ...base, ...element };
             }
         }
 
@@ -98,7 +100,7 @@ export class SVDParser {
         for (const p of peripherials) {
             p.collectRanges();
         }
-        
+
         return peripherials;
     }
 
@@ -121,8 +123,7 @@ export class SVDParser {
             if (f.bitOffset && f.bitWidth) {
                 offset = parseInteger(f.bitOffset[0]);
                 width = parseInteger(f.bitWidth[0]);
-            }
-            else if (f.bitRange) {
+            } else if (f.bitRange) {
                 let range = f.bitRange[0];
                 range = range.substring(1, range.length - 1);
                 range = range.split(':');
@@ -133,8 +134,7 @@ export class SVDParser {
                     width = end - start + 1;
                     offset = start;
                 }
-            }
-            else if (f.msb && f.lsb) {
+            } else if (f.msb && f.lsb) {
                 const msb = parseInteger(f.msb[0]);
                 const lsb = parseInteger(f.lsb[0]);
 
@@ -142,8 +142,7 @@ export class SVDParser {
                     width = msb - lsb + 1;
                     offset = lsb;
                 }
-            }
-            else {
+            } else {
                 // tslint:disable-next-line:max-line-length
                 throw new Error(`Unable to parse SVD file: field ${f.name[0]} must have either bitOffset and bitWidth elements, bitRange Element, or msb and lsb elements.`);
             }
@@ -158,8 +157,7 @@ export class SVDParser {
                         throw new Error(`Invalid derivedFrom=${eValues.$.derivedFrom} for enumeratedValues of field ${f.name[0]}`);
                     }
                     valueMap = found;
-                }
-                else if (eValues) {
+                } else if (eValues) {
                     if (eValues.enumeratedValue) {
                         eValues.enumeratedValue.map((ev: any) => {
                             if (ev.value && ev.value.length > 0) {
@@ -167,7 +165,7 @@ export class SVDParser {
                                 const evdesc = this.cleanupDescription(ev.description ? ev.description[0] : '');
                                 const val = ev.value[0].toLowerCase();
                                 const evvalue = parseInteger(val);
-                                
+
                                 if (valueMap && evvalue) {
                                     valueMap[evvalue] = new EnumeratedValue(evname, evdesc, evvalue);
                                 }
@@ -209,8 +207,7 @@ export class SVDParser {
                     let index = [];
                     if (f.dimIndex) {
                         index = parseDimIndex(f.dimIndex[0], count);
-                    }
-                    else {
+                    } else {
                         for (let i = 0; i < count; i++) { index.push(`${i}`); }
                     }
 
@@ -224,8 +221,7 @@ export class SVDParser {
                         }
                     }
                 }
-            }
-            else {
+            } else {
                 fields.push(new PeripheralFieldNode(parent, { ...baseOptions }));
             }
         });
@@ -257,7 +253,7 @@ export class SVDParser {
                     throw new Error(`SVD error: Invalid 'derivedFrom' "${derivedFrom}" for register "${nm}"`);
                 }
                 // We are supposed to preserve all but the addressOffseet, but the following should work
-                const combined = {...from, ...r};
+                const combined = { ...from, ...r };
                 delete combined.$.derivedFrom;          // No need to keep this anymore
                 combined.$._derivedFrom = derivedFrom;  // Save a backup for debugging
                 localRegisterMap[nm] = combined;
@@ -289,8 +285,7 @@ export class SVDParser {
                     let index = [];
                     if (r.dimIndex) {
                         index = parseDimIndex(r.dimIndex[0], count);
-                    }
-                    else {
+                    } else {
                         for (let i = 0; i < count; i++) { index.push(`${i}`); }
                     }
 
@@ -332,9 +327,13 @@ export class SVDParser {
         }
 
         registers.sort((a, b) => {
-            if (a.offset < b.offset) { return -1; }
-            else if (a.offset > b.offset) { return 1; }
-            else { return 0; }
+            if (a.offset < b.offset) {
+                return -1;
+            } else if (a.offset > b.offset) {
+                return 1;
+            } else {
+                return 0;
+            }
         });
 
         return registers;
@@ -367,8 +366,7 @@ export class SVDParser {
                     let index = [];
                     if (c.dimIndex) {
                         index = parseDimIndex(c.dimIndex[0], count);
-                    }
-                    else {
+                    } else {
                         for (let i = 0; i < count; i++) { index.push(`${i}`); }
                     }
 
@@ -413,7 +411,6 @@ export class SVDParser {
                     clusters.push(cluster);
                 }
             }
-
         });
 
         return clusters;
@@ -430,7 +427,7 @@ export class SVDParser {
                 }
             }
         }
-        
+
         const options: any = {
             name: p.name[0],
             baseAddress: parseInteger(p.baseAddress ? p.baseAddress[0] : 0),
@@ -442,7 +439,7 @@ export class SVDParser {
         if (p.size) { options.size = parseInteger(p.size[0]); }
         if (p.resetValue) { options.resetValue = parseInteger(p.resetValue[0]); }
         if (p.groupName) { options.groupName = p.groupName[0]; }
-        
+
         const peripheral = new PeripheralNode(session, SVDParser.gapThreshold, options);
 
         if (p.registers) {

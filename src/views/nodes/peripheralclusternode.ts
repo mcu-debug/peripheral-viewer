@@ -1,6 +1,6 @@
 import { TreeItem, TreeItemCollapsibleState } from 'vscode';
 import { PeripheralBaseNode, ClusterOrRegisterBaseNode } from './basenode';
-import { AccessType } from '../../svd';
+import { AccessType } from '../../svd-parser';
 import { PeripheralRegisterNode } from './peripheralregisternode';
 import { PeripheralNode } from './peripheralnode';
 import { NodeSetting, NumberFormat } from '../../common';
@@ -46,7 +46,7 @@ export class PeripheralClusterNode extends ClusterOrRegisterBaseNode {
         const item = new TreeItem(label, this.expanded ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.Collapsed);
         item.contextValue = 'cluster';
         item.tooltip = this.description || undefined;
-        
+
         return item;
     }
 
@@ -54,12 +54,12 @@ export class PeripheralClusterNode extends ClusterOrRegisterBaseNode {
         return this.children;
     }
 
-    public setChildren(children: PeripheralRegisterOrClusterNode[]) {
+    public setChildren(children: PeripheralRegisterOrClusterNode[]): void {
         this.children = children.slice(0, children.length);
         this.children.sort((c1, c2) => c1.offset > c2.offset ? 1 : -1);
     }
 
-    public addChild(child: PeripheralRegisterOrClusterNode) {
+    public addChild(child: PeripheralRegisterOrClusterNode): void {
         this.children.push(child);
         this.children.sort((c1, c2) => c1.offset > c2.offset ? 1 : -1);
     }
@@ -75,18 +75,21 @@ export class PeripheralClusterNode extends ClusterOrRegisterBaseNode {
     public getOffset(offset: number): number {
         return this.parent.getOffset(this.offset + offset);
     }
-    
+
     public getFormat(): NumberFormat {
-        if (this.format !== NumberFormat.Auto) { return this.format; }
-        else { return this.parent.getFormat(); }
+        if (this.format !== NumberFormat.Auto) {
+            return this.format;
+        } else {
+            return this.parent.getFormat();
+        }
     }
 
-    public updateData(): Thenable<any> {
+    public updateData(): Thenable<boolean> {
         return new Promise((resolve, reject) => {
             const promises = this.children.map((r) => r.updateData());
-            Promise.all(promises).then((updated) => {
+            Promise.all(promises).then(() => {
                 resolve(true);
-            }).catch((e) => {
+            }).catch(() => {
                 reject('Failed');
             });
         });
@@ -107,18 +110,22 @@ export class PeripheralClusterNode extends ClusterOrRegisterBaseNode {
     }
 
     public findByPath(path: string[]): PeripheralBaseNode | undefined {
-        if (path.length === 0) { return this; }
-        else {
+        if (path.length === 0) {
+            return this;
+        } else {
             const child = this.children.find((c) => c.name === path[0]);
-            if (child) { return child.findByPath(path.slice(1)); }
-            else { return undefined; }
+            if (child) {
+                return child.findByPath(path.slice(1));
+            } else {
+                return undefined;
+            }
         }
     }
 
     public collectRanges(ary: AddrRange[]): void {
         this.children.map((r) => { r.collectRanges(ary); });
     }
-    
+
     public getPeripheral(): PeripheralBaseNode {
         return this.parent.getPeripheral();
     }
@@ -127,7 +134,7 @@ export class PeripheralClusterNode extends ClusterOrRegisterBaseNode {
         throw new Error('Method not implemented.');
     }
 
-    public performUpdate(): Thenable<any> {
+    public performUpdate(): Thenable<boolean> {
         throw new Error('Method not implemented.');
     }
 }

@@ -1,5 +1,5 @@
 import { TreeItem, TreeItemCollapsibleState, ThemeIcon } from 'vscode';
-import { AccessType } from '../../svd';
+import { AccessType } from '../../svd-parser';
 import { PeripheralBaseNode } from './basenode';
 import { AddrRange, AddressRangesUtils } from '../../addrranges';
 import { NumberFormat, NodeSetting } from '../../common';
@@ -32,7 +32,7 @@ export class PeripheralNode extends PeripheralBaseNode {
     public readonly size: number;
     public readonly resetValue: number;
     protected addrRanges: AddrRange[];
-    
+
     private currentValue: number[] = [];
 
     constructor(public session: vscode.DebugSession, public gapThreshold: number, options: PeripheralOptions) {
@@ -72,12 +72,12 @@ export class PeripheralNode extends PeripheralBaseNode {
         return this.children;
     }
 
-    public setChildren(children: Array<PeripheralRegisterNode | PeripheralClusterNode>) {
+    public setChildren(children: Array<PeripheralRegisterNode | PeripheralClusterNode>): void {
         this.children = children;
         this.children.sort((c1, c2) => c1.offset > c2.offset ? 1 : -1);
     }
 
-    public addChild(child: PeripheralRegisterOrClusterNode) {
+    public addChild(child: PeripheralRegisterOrClusterNode): void {
         this.children.push(child);
         this.children.sort((c1, c2) => c1.offset > c2.offset ? 1 : -1);
     }
@@ -85,17 +85,16 @@ export class PeripheralNode extends PeripheralBaseNode {
     public getBytes(offset: number, size: number): Uint8Array {
         try {
             return new Uint8Array(this.currentValue.slice(offset, offset + size));
-        }
-        catch (e) {
+        } catch (e) {
             return new Uint8Array(0);
         }
     }
 
-    public getAddress(offset: number) {
+    public getAddress(offset: number): number {
         return this.baseAddress + offset;
     }
 
-    public getOffset(offset: number) {
+    public getOffset(offset: number): number {
         return offset;
     }
 
@@ -139,7 +138,7 @@ export class PeripheralNode extends PeripheralBaseNode {
 
         return MemReadUtils.readMemoryChunks(this.session, this.baseAddress, this.addrRanges, this.currentValue);
     }
-    
+
     public collectRanges(): void {
         const addresses: AddrRange[] = [];
         this.children.map((child) => child.collectRanges(addresses));
@@ -178,8 +177,8 @@ export class PeripheralNode extends PeripheralBaseNode {
     public selected(): Thenable<boolean> {
         return this.performUpdate();
     }
-    
-    public saveState(path?: string): NodeSetting[] {
+
+    public saveState(_path?: string): NodeSetting[] {
         const results: NodeSetting[] = [];
 
         if (this.format !== NumberFormat.Auto || this.expanded || this.pinned) {
@@ -199,15 +198,19 @@ export class PeripheralNode extends PeripheralBaseNode {
     }
 
     public findByPath(path: string[]): PeripheralBaseNode | undefined{
-        if (path.length === 0) { return this; }
-        else {
+        if (path.length === 0) {
+            return this;
+        } else {
             const child = this.children.find((c) => c.name === path[0]);
-            if (child) { return child.findByPath(path.slice(1)); }
-            else { return undefined; }
+            if (child) {
+                return child.findByPath(path.slice(1));
+            } else {
+                return undefined;
+            }
         }
     }
 
-    public performUpdate(): Thenable<any> {
+    public performUpdate(): Thenable<boolean> {
         throw new Error('Method not implemented.');
     }
 
@@ -216,11 +219,9 @@ export class PeripheralNode extends PeripheralBaseNode {
             // none or both peripherals are pinned, sort by name prioritizing groupname
             if (p1.groupName !== p2.groupName) {
                 return p1.groupName > p2.groupName ? 1 : -1;
-            }
-            else if (p1.name !== p2.name) {
+            } else if (p1.name !== p2.name) {
                 return p1.name > p2.name ? 1 : -1;
-               }
-            else {
+            } else {
                 return 0;
             }
         } else {
