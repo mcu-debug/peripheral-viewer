@@ -30,8 +30,8 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
     public readonly width: number;
     public readonly accessType: AccessType;
     
-    private enumeration: EnumerationMap;
-    private enumerationValues: string[];
+    private enumeration: EnumerationMap | undefined;
+    private enumerationValues: string[] = [];
     private enumerationMap: any;
     private prevValue: string = '';
 

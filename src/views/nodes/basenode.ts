@@ -26,8 +26,8 @@ export abstract class BaseNode {
 export abstract class PeripheralBaseNode extends BaseNode {
     public format: NumberFormat;
     public pinned: boolean;
-    public readonly name: string;
-    public session: DebugSession;
+    public readonly name: string | undefined;
+    public session: DebugSession | undefined;
     
     constructor(protected readonly parent?: PeripheralBaseNode) {
         super(parent);
@@ -52,5 +52,5 @@ export abstract class PeripheralBaseNode extends BaseNode {
 }
 
 export abstract class ClusterOrRegisterBaseNode extends PeripheralBaseNode {
-    public readonly offset: number;
+    public readonly offset: number | undefined;
 }

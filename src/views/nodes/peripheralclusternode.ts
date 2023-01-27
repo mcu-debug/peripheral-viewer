@@ -68,11 +68,11 @@ export class PeripheralClusterNode extends ClusterOrRegisterBaseNode {
         return this.parent.getBytes(this.offset + offset, size);
     }
 
-    public getAddress(offset: number) {
+    public getAddress(offset: number): number {
         return this.parent.getAddress(this.offset + offset);
     }
 
-    public getOffset(offset: number) {
+    public getOffset(offset: number): number {
         return this.parent.getOffset(this.offset + offset);
     }
     

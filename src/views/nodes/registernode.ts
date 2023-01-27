@@ -10,7 +10,7 @@ export interface RegisterValue {
 }
 
 export class RegisterNode extends BaseNode {
-    private fields: FieldNode[];
+    private fields: FieldNode[] = [];
     private currentValue: number;
     private currentNaturalValue: string;
     private prevNaturalValue: string;

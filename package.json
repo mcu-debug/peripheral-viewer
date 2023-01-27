@@ -41,6 +41,7 @@
     "@vscode/test-web": "^0.0.24",
     "buffer": "^6.0.3",
     "eslint": "^7.29.0",
+    "path-browserify": "1.0.1",
     "serve": "^14.0.1",
     "stream-browserify": "^3.0.0",
     "timers-browserify": "^2.0.12",

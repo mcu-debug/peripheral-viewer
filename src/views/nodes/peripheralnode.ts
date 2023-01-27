@@ -28,14 +28,14 @@ export class PeripheralNode extends PeripheralBaseNode {
     public readonly description: string;
     public readonly groupName: string;
     public readonly totalLength: number;
-    public readonly accessType: AccessType;
+    public readonly accessType = AccessType.ReadOnly;
     public readonly size: number;
     public readonly resetValue: number;
     protected addrRanges: AddrRange[];
     
-    private currentValue: number[];
+    private currentValue: number[] = [];
 
-    constructor(public session: vscode.DebugSession, public gapThreshold, options: PeripheralOptions) {
+    constructor(public session: vscode.DebugSession, public gapThreshold: number, options: PeripheralOptions) {
         super();
 
         this.name = options.name;
@@ -103,41 +103,33 @@ export class PeripheralNode extends PeripheralBaseNode {
         return this.format;
     }
 
-    public updateData(): Thenable<boolean> {
-        return new Promise((resolve, reject) => {
-            if (!this.expanded) { resolve(false); return; }
+    public async updateData(): Promise<boolean> {
+        if (!this.expanded) {
+            return false;
+        }
 
-            this.readMemory().then(() => {
-                this.updateChildData(resolve, reject, undefined);
-            }, (e) => {
-                const msg = e.message || 'unknown error';
-                const str = `Failed to update peripheral ${this.name}: ${msg}`;
-                if (vscode.debug.activeDebugConsole) {
-                    vscode.debug.activeDebugConsole.appendLine(str);
-                }
-                this.updateChildData(null, reject, new Error(str));
-            });
-        });
-    }
-
-    // Finish updating all the children as much as possible. If we already had an error, use that
-    // and if a new error occurs, then use that.
-    private updateChildData(resolve, reject, error?: Error) {
-        const promises = this.children.map((r) => r.updateData());
-        Promise.all(promises).then((_) => {
-            if (error) {
-                reject(error);
-            } else {
-                resolve(true);
-            }
-        }).catch((e) => {
-            const msg = e.message || 'unknown error';
+        try {
+            await this.readMemory();
+        } catch (e) {
+            const msg = (e as Error).message || 'unknown error';
             const str = `Failed to update peripheral ${this.name}: ${msg}`;
             if (vscode.debug.activeDebugConsole) {
                 vscode.debug.activeDebugConsole.appendLine(str);
             }
-            reject(error ? error : new Error(str));
-        });
+        }
+
+        try {
+            const promises = this.children.map((r) => r.updateData());
+            await Promise.all(promises);
+            return true;
+        } catch (e) {
+            const msg = (e as Error).message || 'unknown error';
+            const str = `Failed to update peripheral ${this.name}: ${msg}`;
+            if (vscode.debug.activeDebugConsole) {
+                vscode.debug.activeDebugConsole.appendLine(str);
+            }
+            throw new Error(str);
+        }
     }
 
     protected readMemory(): Promise<boolean> {
