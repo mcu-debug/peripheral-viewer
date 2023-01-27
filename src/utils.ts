@@ -118,3 +118,16 @@ export function parseDimIndex(spec: string, count: number): string[] {
 
     return [];
 }
+
+export const readFromUrl = async (url: string): Promise<ArrayBuffer | undefined> => {
+    // Download using fetch
+    const response = await fetch(url);
+    if (!response.ok) {
+        const body = await response.text();
+        const msg = `Request to ${url} failed. Status="${response.status}". Body="${body}".`;
+        throw new Error(msg);
+    }
+
+    const buffer = await response.arrayBuffer();
+    return buffer;
+};

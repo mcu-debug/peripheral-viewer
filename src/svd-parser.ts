@@ -48,11 +48,11 @@ const accessTypeFromString = (type: string): AccessType => {
     }
 };
 
-interface Peripheral {
+export interface Peripheral {
     name: string[];
 }
 
-interface Device {
+export interface Device {
     resetValue: string[];
     size: string[];
     access: string[];
@@ -61,7 +61,7 @@ interface Device {
     }[];
 }
 
-interface SvdData {
+export interface SvdData {
     device: Device;
 }
 
