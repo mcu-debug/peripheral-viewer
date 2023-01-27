@@ -25,6 +25,7 @@ import { extractBits, createMask, hexFormat, binaryFormat } from '../../utils';
 import { NumberFormat, NodeSetting } from '../../common';
 import { AccessType } from '../../svd-parser';
 import { AddrRange } from '../../addrranges';
+import { MemReadUtils } from '../../memreadutils';
 
 export interface PeripheralRegisterOptions {
     name: string;
@@ -254,25 +255,13 @@ export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
     }
 
     private async updateValueInternal(value: number): Promise<boolean> {
-        const address = this.parent.getAddress(this.offset);
-        const bytes: string[] = [];
-        const numbytes = this.size / 8;
-
-        for (let i = 0; i < numbytes; i++) {
-            const byte = value & 0xFF;
-            value = value >>> 8;
-            let bs = byte.toString(16);
-            if (bs.length === 1) { bs = '0' + bs; }
-            bytes[i] = bs;
+        if (!vscode.debug.activeDebugSession) {
+            return false;
         }
-
-        if (vscode.debug.activeDebugSession) {
-            await vscode.debug.activeDebugSession.customRequest('write-memory', { address: address, data: bytes.join('') });
-            await this.parent.updateData();
-            return true;
-        }
-
-        return false;
+        
+        await MemReadUtils.writeMemory(vscode.debug.activeDebugSession, this.parent.getAddress(this.offset), value, this.size);
+        await this.parent.updateData();
+        return true;
     }
 
     public updateData(): Thenable<boolean> {
