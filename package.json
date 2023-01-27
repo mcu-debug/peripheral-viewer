@@ -63,7 +63,7 @@
     },
     "commands": [
       {
-        "command": "svd-viewer.svd.setValue",
+        "command": "svd-viewer.svd.updateNode",
         "title": "Update Value",
         "icon": "$(edit)"
       },
@@ -73,7 +73,7 @@
         "icon": "$(files)"
       },
       {
-        "command": "svd-viewer.svd.refreshValue",
+        "command": "svd-viewer.svd.forceRefresh",
         "title": "Refresh",
         "icon": "$(refresh)"
       },
@@ -96,7 +96,7 @@
     "menus": {
       "commandPalette": [
         {
-          "command": "svd-viewer.svd.setValue",
+          "command": "svd-viewer.svd.updateNode",
           "when": "false"
         },
         {
@@ -104,7 +104,7 @@
           "when": "false"
         },
         {
-          "command": "svd-viewer.svd.refreshValue",
+          "command": "svd-viewer.svd.forceRefresh",
           "when": "false"
         },
         {
@@ -122,19 +122,19 @@
       ],
       "touchBar": [
         {
-          "command": "svd-viewer.svd.refreshValue",
+          "command": "svd-viewer.svd.forceRefresh",
           "when": "view == svd-viewer.svd && viewItem == registerRW"
         },
         {
-          "command": "svd-viewer.svd.refreshValue",
+          "command": "svd-viewer.svd.forceRefresh",
           "when": "view == svd-viewer.svd && viewItem == register"
         },
         {
-          "command": "svd-viewer.svd.refreshValue",
+          "command": "svd-viewer.svd.forceRefresh",
           "when": "view == svd-viewer.svd && viewItem == registerRO"
         },
         {
-          "command": "svd-viewer.svd.refreshValue",
+          "command": "svd-viewer.svd.forceRefresh",
           "when": "view == svd-viewer.svd && viewItem =~ /peripheral.*/"
         },
         {
@@ -148,22 +148,22 @@
       ],
       "view/item/context": [
         {
-          "command": "svd-viewer.svd.setValue",
+          "command": "svd-viewer.svd.updateNode",
           "when": "view == svd-viewer.svd && viewItem == field",
           "group": "inline"
         },
         {
-          "command": "svd-viewer.svd.setValue",
+          "command": "svd-viewer.svd.updateNode",
           "when": "view == svd-viewer.svd && viewItem == fieldWO",
           "group": "inline"
         },
         {
-          "command": "svd-viewer.svd.setValue",
+          "command": "svd-viewer.svd.updateNode",
           "when": "view == svd-viewer.svd && viewItem == registerRW",
           "group": "inline"
         },
         {
-          "command": "svd-viewer.svd.setValue",
+          "command": "svd-viewer.svd.updateNode",
           "when": "view == svd-viewer.svd && viewItem == registerWO",
           "group": "inline"
         },
@@ -183,22 +183,22 @@
           "group": "inline"
         },
         {
-          "command": "svd-viewer.svd.refreshValue",
+          "command": "svd-viewer.svd.forceRefresh",
           "when": "view == svd-viewer.svd && viewItem == registerRW",
           "group": "inline"
         },
         {
-          "command": "svd-viewer.svd.refreshValue",
+          "command": "svd-viewer.svd.forceRefresh",
           "when": "view == svd-viewer.svd && viewItem == register",
           "group": "inline"
         },
         {
-          "command": "svd-viewer.svd.refreshValue",
+          "command": "svd-viewer.svd.forceRefresh",
           "when": "view == svd-viewer.svd && viewItem == registerRO",
           "group": "inline"
         },
         {
-          "command": "svd-viewer.svd.refreshValue",
+          "command": "svd-viewer.svd.forceRefresh",
           "when": "view == svd-viewer.svd && viewItem =~ /peripheral.*/",
           "group": "inline"
         },

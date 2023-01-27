@@ -12,10 +12,8 @@ export class AddrRange {
         return this.nxtAddr() - 1;
     }
 }
-export class AddressRangesUtils {
-    constructor() {
-    }
 
+export class AddressRangesUtils {
     /**
      * Returns a set of address ranges that have 0 < length <= maxBytes
      * 

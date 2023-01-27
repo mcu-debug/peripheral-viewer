@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as manifest from '../manifest';
 import { TreeItem, ProviderResult} from 'vscode';
 import { NodeSetting } from '../common';
 import { BaseNode, PeripheralBaseNode } from './nodes/basenode';
@@ -6,7 +7,8 @@ import { PeripheralNode } from './nodes/peripheralnode';
 import { SVDParser } from '../svd';
 import { MessageNode } from './nodes/messagenode';
 import { AddrRange } from '../addrranges';
-import { CortexDebugExtension } from '../extension';
+import { DebugTracker } from '../debug-tracker';
+import { SvdRegistry } from '../svd-registry';
 
 export class PeripheralTreeForSession extends PeripheralBaseNode {
     public myTreeItem: TreeItem;
@@ -182,6 +184,7 @@ export class PeripheralTreeForSession extends PeripheralBaseNode {
         this.peripherials.sort(PeripheralNode.compare);
     }
 }
+
 export class PeripheralTreeProvider implements vscode.TreeDataProvider<PeripheralBaseNode> {
     // tslint:disable-next-line:variable-name
     public _onDidChangeTreeData: vscode.EventEmitter<PeripheralBaseNode | undefined> = new vscode.EventEmitter<PeripheralBaseNode | undefined>();
@@ -189,7 +192,27 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
     protected sessionPeripheralsMap = new Map <string, PeripheralTreeForSession>();
     protected oldState = new Map <string, vscode.TreeItemCollapsibleState>();
 
-    constructor() {
+    constructor(tracker: DebugTracker, protected registry: SvdRegistry) {
+        tracker.onWillStartSession(session => this.debugSessionStarted(session));
+        tracker.onDidStopSession(session => this.debugSessionTerminated(session));
+    }
+
+    public async activate(context: vscode.ExtensionContext): Promise<void> {
+        const view = vscode.window.createTreeView(`${manifest.PACKAGE_NAME}.svd`, { treeDataProvider: this });
+        context.subscriptions.push(
+            view,
+            view.onDidExpandElement((e) => {
+                e.element.expanded = true;
+                const p = e.element.getPeripheral();
+                if (p) {
+                    p.updateData();
+                    this.refresh();
+                }
+            }),
+            view.onDidCollapseElement((e) => {
+                e.element.expanded = false;
+            })
+        );
     }
 
     public refresh(): void {
@@ -213,7 +236,17 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
         }
     }
 
-    public debugSessionStarted(session: vscode.DebugSession, svdfile: string, thresh: any): Thenable<any> {
+    public debugSessionStarted(session: vscode.DebugSession): Thenable<any> {
+        const thresh = args.svdAddrGapThreshold
+        let svdfile = args.svdFile;
+            if (!svdfile) {
+                svdfile = this.registry.getSVDFile(args.device);
+            }
+
+            if (!svdfile) {
+                svdfile = await this.registry.getSVDFileFromCortexDebug(args.device);
+            }
+
         return new Promise<void>(async (resolve, reject) => {
             if (!svdfile) {
                 resolve(undefined);
@@ -263,11 +296,8 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
         }
     }
 
-    public debugContinued() {
-    }
-
     public togglePinPeripheral(node: PeripheralBaseNode) {
-        const session = CortexDebugExtension.getActiveCDSession();
+        const session = vscode.debug.activeDebugSession;
         if (session) {
             const regs = this.sessionPeripheralsMap.get(session.id);
             if (regs) {
