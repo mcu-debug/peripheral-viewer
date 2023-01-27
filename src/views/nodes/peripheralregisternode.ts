@@ -1,11 +1,29 @@
-import { TreeItem, TreeItemCollapsibleState, TreeItemLabel, window, debug, MarkdownString } from 'vscode';
+/*
+ * Copyright 2017-2019 Marcel Ball
+ * https://github.com/Marus/cortex-debug
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+ * documentation files (the "Software"), to deal in the Software without restriction, including without
+ * limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+ * TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+ * CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
+ */
+
+import * as vscode from 'vscode';
 import { PeripheralNode } from './peripheralnode';
 import { PeripheralClusterNode } from './peripheralclusternode';
 import { ClusterOrRegisterBaseNode, PeripheralBaseNode } from './basenode';
 import { PeripheralFieldNode } from './peripheralfieldnode';
-import { AccessType } from '../../svd-parser';
 import { extractBits, createMask, hexFormat, binaryFormat } from '../../utils';
 import { NumberFormat, NodeSetting } from '../../common';
+import { AccessType } from '../../svd-parser';
 import { AddrRange } from '../../addrranges';
 
 export interface PeripheralRegisterOptions {
@@ -75,29 +93,29 @@ export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
         });
     }
 
-    public getTreeItem(): TreeItem | Promise<TreeItem> {
+    public getTreeItem(): vscode.TreeItem | Promise<vscode.TreeItem> {
         const label = `${this.name} @ ${hexFormat(this.offset, 0)}`;
         const collapseState = this.children && this.children.length > 0
-            ? (this.expanded ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.Collapsed)
-            : TreeItemCollapsibleState.None;
+            ? (this.expanded ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.Collapsed)
+            : vscode.TreeItemCollapsibleState.None;
 
         const displayValue = this.getFormattedValue(this.getFormat());
-        const labelItem: TreeItemLabel = {
+        const labelItem: vscode.TreeItemLabel = {
             label: label + ' ' + displayValue
         };
         if (displayValue !== this.prevValue) {
             labelItem.highlights = [[label.length + 1, labelItem.label.length]];
             this.prevValue = displayValue;
         }
-        const item = new TreeItem(labelItem, collapseState);
+        const item = new vscode.TreeItem(labelItem, collapseState);
         item.contextValue = this.accessType === AccessType.ReadWrite ? 'registerRW' : (this.accessType === AccessType.ReadOnly ? 'registerRO' : 'registerWO');
         item.tooltip = this.generateTooltipMarkdown() || undefined;
 
         return item;
     }
 
-    private generateTooltipMarkdown(): MarkdownString | null {
-        const mds = new MarkdownString('', true);
+    private generateTooltipMarkdown(): vscode.MarkdownString | null {
+        const mds = new vscode.MarkdownString('', true);
         mds.isTrusted = true;
 
         const address = `${ hexFormat(this.getAddress()) }`;
@@ -209,7 +227,7 @@ export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
     }
 
     public async performUpdate(): Promise<boolean> {
-        const val = await window.showInputBox({ prompt: 'Enter new value: (prefix hex with 0x, binary with 0b)', value: this.getCopyValue() });
+        const val = await vscode.window.showInputBox({ prompt: 'Enter new value: (prefix hex with 0x, binary with 0b)', value: this.getCopyValue() });
         if (!val) {
             return false;
         }
@@ -248,8 +266,8 @@ export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
             bytes[i] = bs;
         }
 
-        if (debug.activeDebugSession) {
-            await debug.activeDebugSession.customRequest('write-memory', { address: address, data: bytes.join('') });
+        if (vscode.debug.activeDebugSession) {
+            await vscode.debug.activeDebugSession.customRequest('write-memory', { address: address, data: bytes.join('') });
             await this.parent.updateData();
             return true;
         }
@@ -272,7 +290,7 @@ export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
                 this.currentValue = buffer.readUInt32LE(0);
                 break;
             default:
-                window.showErrorMessage(`Register ${this.name} has invalid size: ${this.size}. Should be 8, 16 or 32.`);
+                vscode.window.showErrorMessage(`Register ${this.name} has invalid size: ${this.size}. Should be 8, 16 or 32.`);
                 break;
         }
         this.children.forEach((f) => f.updateData());

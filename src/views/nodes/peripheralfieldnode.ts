@@ -1,7 +1,25 @@
-import { TreeItem, TreeItemCollapsibleState, window, MarkdownString, TreeItemLabel } from 'vscode';
+/*
+ * Copyright 2017-2019 Marcel Ball
+ * https://github.com/Marus/cortex-debug
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+ * documentation files (the "Software"), to deal in the Software without restriction, including without
+ * limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+ * TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+ * CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
+ */
+
+import * as vscode from 'vscode';
 import { PeripheralBaseNode } from './basenode';
-import { AccessType } from '../../svd-parser';
 import { PeripheralRegisterNode } from './peripheralregisternode';
+import { AccessType } from '../../svd-parser';
 import { AddrRange } from '../../addrranges';
 import { NumberFormat, NodeSetting } from '../../common';
 import { parseInteger, binaryFormat, hexFormat } from '../../utils';
@@ -73,7 +91,7 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
         this.parent.addChild(this);
     }
 
-    public getTreeItem(): TreeItem | Promise<TreeItem> {
+    public getTreeItem(): vscode.TreeItem | Promise<vscode.TreeItem> {
         const isReserved = this.name.toLowerCase() === 'reserved';
 
         const context = isReserved ? 'field-res' : (this.parent.accessType === AccessType.ReadOnly ? 'field-ro' : 'field');
@@ -82,14 +100,14 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
         const rangeend = this.offset + this.width - 1;
         const label = `${this.name} [${rangeend}:${rangestart}]`;
         const displayValue = this.getFormattedValue(this.getFormat());
-        const labelItem: TreeItemLabel = {
+        const labelItem: vscode.TreeItemLabel = {
             label: label + ' ' + displayValue
         };
         if (displayValue !== this.prevValue) {
             labelItem.highlights = [[label.length + 1, labelItem.label.length]];
             this.prevValue = displayValue;
         }
-        const item = new TreeItem(labelItem, TreeItemCollapsibleState.None);
+        const item = new vscode.TreeItem(labelItem, vscode.TreeItemCollapsibleState.None);
 
         item.contextValue = context;
         item.tooltip = this.generateTooltipMarkdown(isReserved) || undefined;
@@ -97,8 +115,8 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
         return item;
     }
 
-    private generateTooltipMarkdown(isReserved: boolean): MarkdownString | null {
-        const mds = new MarkdownString('', true);
+    private generateTooltipMarkdown(isReserved: boolean): vscode.MarkdownString | null {
+        const mds = new vscode.MarkdownString('', true);
         mds.isTrusted = true;
 
         const address = `${ hexFormat(this.parent.getAddress()) }${ this.getFormattedRange() }`;
@@ -224,14 +242,14 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
     public performUpdate(): Thenable<boolean> {
         return new Promise((resolve, reject) => {
             if (this.enumeration) {
-                window.showQuickPick(this.enumerationValues).then((val) => {
+                vscode.window.showQuickPick(this.enumerationValues).then((val) => {
                     if (val === undefined) { return reject('Input not selected'); }
 
                     const numval = this.enumerationMap[val];
                     this.parent.updateBits(this.offset, this.width, numval).then(resolve, reject);
                 });
             } else {
-                window.showInputBox({ prompt: 'Enter new value: (prefix hex with 0x, binary with 0b)', value: this.getCopyValue() }).then((val) => {
+                vscode.window.showInputBox({ prompt: 'Enter new value: (prefix hex with 0x, binary with 0b)', value: this.getCopyValue() }).then((val) => {
                     if (typeof val === 'string') {
                         const numval = parseInteger(val);
                         if (numval === undefined) {
