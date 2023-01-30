@@ -350,7 +350,7 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
         vscode.commands.executeCommand('setContext', `${manifest.PACKAGE_NAME}.svd.hasData`, this.sessionPeripheralsMap.size > 0);
     }
 
-    public debugStopped(session: vscode.DebugSession) {
+    public debugStopped(session: vscode.DebugSession): void {
         const regs = this.sessionPeripheralsMap.get(session.id);
         if (regs) {     // We are called even before the session has started, as part of reset
             regs.updateData();
