@@ -16,10 +16,10 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v3
         with:
           node-version: 14.x
       - name: Build
@@ -29,7 +29,7 @@ jobs:
           yarn install --ignore-scripts
           yarn build
           yarn package
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: vsix-package
           path: ./*.vsix
@@ -37,29 +37,48 @@ jobs:
 
   release:
     needs: build
-    name: Release
+    name: Create Release
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/download-artifact@v2
+      - uses: actions/checkout@v3
+      - uses: actions/download-artifact@v3
         with:
           path: artifacts
       - uses: softprops/action-gh-release@v1
         with:
           files: artifacts/*/*.vsix
 
-  publish:
+  publish-open-vsx-registry:
     needs: build
-    name: Publish
+    name: Open VSX
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/download-artifact@v2
+      - uses: actions/checkout@v3
+      - uses: actions/download-artifact@v3
         with:
           path: artifacts
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 14.x
       - name: Publish
         run: |
-          npx ovsx publish -i artifacts/*/*.vsix -p ${{secrets.OPEN_VSX_TOKEN}}
+          npx ovsx@0.8.0 publish -i artifacts/*/*.vsix -p ${{secrets.OPEN_VSX_TOKEN}}
+
+  publish-vscode-marketplace:
+    needs: build
+    name: VS Code Marketplace
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/download-artifact@v3
+        with:
+          path: artifacts
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 14.x
+      - name: Publish
+        run: |
           npx vsce publish -i artifacts/*/*.vsix -p ${{secrets.VS_MARKETPLACE_TOKEN}}
