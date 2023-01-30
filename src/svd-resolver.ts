@@ -66,7 +66,7 @@ export class SvdResolver {
                         packDevice = devices[0];
                     } else {
                         // Ask user which device to use
-                        const items = [...deviceMap.keys()];
+                        const items = [...deviceMap.keys()].map(label => ({ label }));
                         const selected = await getSelection('Select a device', items, deviceName);
                         if (!selected) {
                             return;
