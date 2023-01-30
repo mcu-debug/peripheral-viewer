@@ -23,7 +23,7 @@ import { BaseNode, PeripheralBaseNode } from './nodes/basenode';
 import { PeripheralNode } from './nodes/peripheralnode';
 import { MessageNode } from './nodes/messagenode';
 import { NodeSetting } from '../common';
-import { SVDParser } from '../svd-parser';
+import { SvdData, SVDParser } from '../svd-parser';
 import { AddrRange } from '../addrranges';
 import { DebugTracker } from '../debug-tracker';
 import { SvdResolver } from '../svd-resolver';
@@ -103,7 +103,7 @@ export class PeripheralTreeForSession extends PeripheralBaseNode {
     }
 
     private async createPeripherals(svdPath: string, gapThreshold: number): Promise<void> {
-        let svdData: string | undefined;
+        let svdData: SvdData | undefined;
 
         try {
             let contents: ArrayBuffer | undefined;
@@ -132,7 +132,7 @@ export class PeripheralTreeForSession extends PeripheralBaseNode {
         this.errMessage = `Loading ${svdPath}`;
 
         try {
-            this.peripherials = await SVDParser.parseSVD(this.session, JSON.parse(svdData), gapThreshold);
+            this.peripherials = await SVDParser.parseSVD(this.session, svdData, gapThreshold);
             this.loaded = true;
         } catch(e) {
             this.peripherials = [];
@@ -254,7 +254,8 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
 
     constructor(tracker: DebugTracker, protected resolver: SvdResolver) {
         tracker.onWillStartSession(session => this.debugSessionStarted(session));
-        tracker.onDidStopSession(session => this.debugSessionTerminated(session));
+        tracker.onWillStopSession(session => this.debugSessionTerminated(session));
+        tracker.onDidStopDebug(session => this.debugStopped(session));
     }
 
     public async activate(context: vscode.ExtensionContext): Promise<void> {
@@ -353,6 +354,13 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
         }
 
         vscode.commands.executeCommand('setContext', `${manifest.PACKAGE_NAME}.svd.hasData`, this.sessionPeripheralsMap.size > 0);
+    }
+
+    public debugStopped(session: vscode.DebugSession) {
+        const regs = this.sessionPeripheralsMap.get(session.id);
+        if (regs) {     // We are called even before the session has started, as part of reset
+            regs.updateData();
+        }
     }
 
     public togglePinPeripheral(node: PeripheralBaseNode): void {

@@ -14,8 +14,8 @@ export class DebugTracker {
     private _onWillStopSession: vscode.EventEmitter<vscode.DebugSession> = new vscode.EventEmitter<vscode.DebugSession>();
     public readonly onWillStopSession: vscode.Event<vscode.DebugSession> = this._onWillStopSession.event;
 
-    private _onDidStopSession: vscode.EventEmitter<vscode.DebugSession> = new vscode.EventEmitter<vscode.DebugSession>();
-    public readonly onDidStopSession: vscode.Event<vscode.DebugSession> = this._onDidStopSession.event;
+    private _onDidStopDebug: vscode.EventEmitter<vscode.DebugSession> = new vscode.EventEmitter<vscode.DebugSession>();
+    public readonly onDidStopDebug: vscode.Event<vscode.DebugSession> = this._onDidStopDebug.event;
 
     public async activate(context: vscode.ExtensionContext): Promise<void> {
         const createDebugAdapterTracker = (session: vscode.DebugSession): vscode.DebugAdapterTracker => {
@@ -24,7 +24,7 @@ export class DebugTracker {
                 onWillStopSession: () => this._onWillStopSession.fire(session),
                 onDidSendMessage: message => {
                     if (message.type === 'event' && message.event === 'stopped') {
-                        this._onDidStopSession.fire(session);
+                        this._onDidStopDebug.fire(session);
                     }
                 }
             };
