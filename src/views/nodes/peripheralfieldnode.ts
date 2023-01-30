@@ -16,10 +16,13 @@
  * IN THE SOFTWARE.
  */
 
-import { window, TreeItem, TreeItemCollapsibleState, MarkdownString } from 'vscode';
-import { PeripheralBaseNode } from './base-node';
-import { PeripheralRegisterNode } from './register-node';
-import { AccessType, parseInteger, binaryFormat, hexFormat, NumberFormat, NodeSetting } from '../util';
+import * as vscode from 'vscode';
+import { PeripheralBaseNode } from './basenode';
+import { PeripheralRegisterNode } from './peripheralregisternode';
+import { AccessType } from '../../svd-parser';
+import { AddrRange } from '../../addrranges';
+import { NumberFormat, NodeSetting } from '../../common';
+import { parseInteger, binaryFormat, hexFormat } from '../../utils';
 
 export interface EnumerationMap {
     [value: number]: EnumeratedValue;
@@ -49,6 +52,7 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
     private enumerationValues: string[] = [];
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private enumerationMap: any;
+    private prevValue = '';
 
     constructor(public parent: PeripheralRegisterNode, options: FieldOptions) {
         super(parent);
@@ -58,7 +62,9 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
         this.offset = options.offset;
         this.width = options.width;
 
-        if (!options.accessType) { this.accessType = parent.accessType; } else {
+        if (!options.accessType) {
+            this.accessType = parent.accessType;
+        } else {
             if (parent.accessType === AccessType.ReadOnly && options.accessType !== AccessType.ReadOnly) {
                 this.accessType = AccessType.ReadOnly;
             } else if (parent.accessType === AccessType.WriteOnly && options.accessType !== AccessType.WriteOnly) {
@@ -73,8 +79,10 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
             this.enumerationMap = {};
             this.enumerationValues = [];
 
+            // tslint:disable-next-line:forin
             for (const key in options.enumeration) {
                 const name = options.enumeration[key].name;
+
                 this.enumerationValues.push(name);
                 this.enumerationMap[name] = key;
             }
@@ -83,25 +91,32 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
         this.parent.addChild(this);
     }
 
-    public getTreeItem(): TreeItem | Promise<TreeItem> {
+    public getTreeItem(): vscode.TreeItem | Promise<vscode.TreeItem> {
         const isReserved = this.name.toLowerCase() === 'reserved';
 
         const context = isReserved ? 'field-res' : (this.parent.accessType === AccessType.ReadOnly ? 'field-ro' : 'field');
 
         const rangestart = this.offset;
         const rangeend = this.offset + this.width - 1;
-
-        const item = new TreeItem(`${this.name} [${rangeend}:${rangestart}]`, TreeItemCollapsibleState.None);
+        const label = `${this.name} [${rangeend}:${rangestart}]`;
+        const displayValue = this.getFormattedValue(this.getFormat());
+        const labelItem: vscode.TreeItemLabel = {
+            label: label + ' ' + displayValue
+        };
+        if (displayValue !== this.prevValue) {
+            labelItem.highlights = [[label.length + 1, labelItem.label.length]];
+            this.prevValue = displayValue;
+        }
+        const item = new vscode.TreeItem(labelItem, vscode.TreeItemCollapsibleState.None);
 
         item.contextValue = context;
-        item.tooltip = this.generateTooltipMarkdown(isReserved);
-        item.description = this.getFormattedValue(this.getFormat());
+        item.tooltip = this.generateTooltipMarkdown(isReserved) || undefined;
 
         return item;
     }
 
-    private generateTooltipMarkdown(isReserved: boolean): MarkdownString | undefined {
-        const mds = new MarkdownString('', true);
+    private generateTooltipMarkdown(isReserved: boolean): vscode.MarkdownString | null {
+        const mds = new vscode.MarkdownString('', true);
         mds.isTrusted = true;
 
         const address = `${ hexFormat(this.parent.getAddress()) }${ this.getFormattedRange() }`;
@@ -191,7 +206,7 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
             case NumberFormat.Binary:
                 formatted = binaryFormat(value, this.width);
                 break;
-            case NumberFormat.Hexidecimal:
+            case NumberFormat.Hexadecimal:
                 formatted = hexFormat(value, Math.ceil(this.width / 4), true);
                 break;
             default:
@@ -218,45 +233,33 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
         if (this.enumeration[value]) {
             return this.enumeration[value].name;
         }
-
-        return undefined;
     }
 
     public getChildren(): PeripheralBaseNode[] | Promise<PeripheralBaseNode[]> {
         return [];
     }
 
-    public async performUpdate(): Promise<boolean> {
-        let numval: number | undefined;
+    public performUpdate(): Thenable<boolean> {
+        return new Promise((resolve, reject) => {
+            if (this.enumeration) {
+                vscode.window.showQuickPick(this.enumerationValues).then((val) => {
+                    if (val === undefined) { return reject('Input not selected'); }
 
-        if (this.enumeration) {
-            const val = await window.showQuickPick(this.enumerationValues);
-            if (val === undefined) {
-                return false;
+                    const numval = this.enumerationMap[val];
+                    this.parent.updateBits(this.offset, this.width, numval).then(resolve, reject);
+                });
+            } else {
+                vscode.window.showInputBox({ prompt: 'Enter new value: (prefix hex with 0x, binary with 0b)', value: this.getCopyValue() }).then((val) => {
+                    if (typeof val === 'string') {
+                        const numval = parseInteger(val);
+                        if (numval === undefined) {
+                            return reject('Unable to parse input value.');
+                        }
+                        this.parent.updateBits(this.offset, this.width, numval).then(resolve, reject);
+                    }
+                });
             }
-
-            numval = this.enumerationMap[val];
-        } else {
-            const val = await window.showInputBox({
-                prompt: 'Enter new value: (prefix hex with 0x, binary with 0b)',
-                value: this.getCopyValue()
-            });
-            if (val === undefined) {
-                return false;
-            }
-
-            numval = parseInteger(val || 'none');
-            if (numval === undefined) {
-                throw new Error('Unable to parse input value.');
-            }
-        }
-
-        if (numval) {
-            await this.parent.updateBits(this.offset, this.width, numval);
-            return true;
-        }
-
-        return false;
+        });
     }
 
     public getCopyValue(): string {
@@ -266,19 +269,23 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
                 return value.toString();
             case NumberFormat.Binary:
                 return binaryFormat(value, this.width);
-            case NumberFormat.Hexidecimal:
+            case NumberFormat.Hexadecimal:
                 return hexFormat(value, Math.ceil(this.width / 4), true);
             default:
                 return this.width >= 4 ? hexFormat(value, Math.ceil(this.width / 4), true) : binaryFormat(value, this.width);
         }
     }
 
-    public async updateData(): Promise<void> {
-        // Do nothing
+    public updateData(): Thenable<boolean> {
+        return Promise.resolve(true);
     }
 
     public getFormat(): NumberFormat {
-        if (this.format !== NumberFormat.Auto) { return this.format; } else { return this.parent.getFormat(); }
+        if (this.format !== NumberFormat.Auto) {
+            return this.format;
+        } else {
+            return this.parent.getFormat();
+        }
     }
 
     public saveState(path: string): NodeSetting[] {
@@ -290,14 +297,18 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
     }
 
     public findByPath(path: string[]): PeripheralBaseNode | undefined {
-        if (path.length === 0) { return this; } else { return undefined; }
+        if (path.length === 0) {
+            return this;
+        } else {
+            return undefined;
+        }
     }
 
     public getPeripheral(): PeripheralBaseNode {
         return this.parent.getPeripheral();
     }
 
-    public markAddresses(): void {
+    public collectRanges(_a: AddrRange[]): void {
         throw new Error('Method not implemented.');
     }
 }

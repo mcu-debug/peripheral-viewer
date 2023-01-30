@@ -16,29 +16,9 @@
  * IN THE SOFTWARE.
  */
 
-export enum AccessType {
-    ReadOnly = 1,
-    ReadWrite,
-    WriteOnly
-}
-
-export enum NumberFormat {
-    Auto = 0,
-    Hexidecimal,
-    Decimal,
-    Binary
-}
-
-export interface NodeSetting {
-    node: string;
-    expanded?: boolean;
-    format?: NumberFormat;
-    pinned?: boolean;
-}
-
 export function hexFormat(value: number, padding = 8, includePrefix = true): string {
-    let base = value.toString(16);
-    while (base.length < padding) { base = '0' + base; }
+    let base = (value >>> 0).toString(16);
+    base = base.padStart(padding, '0');
     return includePrefix ? '0x' + base : base;
 }
 
@@ -84,6 +64,7 @@ export function parseInteger(value: string): number | undefined {
     } else if ((/^#[0-1]+/i).test(value)) {
         return parseInt(value.substring(1), 2);
     }
+
     return undefined;
 }
 
@@ -110,7 +91,7 @@ export function parseDimIndex(spec: string, count: number): string[] {
             throw new Error('dimIndex Element has invalid specification.');
         }
 
-        const components = [];
+        const components: string[] = [];
         for (let i = 0; i < count; i++) {
             components.push(`${start + i}`);
         }
@@ -127,7 +108,7 @@ export function parseDimIndex(spec: string, count: number): string[] {
             throw new Error('dimIndex Element has invalid specification.');
         }
 
-        const components = [];
+        const components: string[] = [];
         for (let i = 0; i < count; i++) {
             components.push(String.fromCharCode(start + i));
         }
@@ -137,3 +118,16 @@ export function parseDimIndex(spec: string, count: number): string[] {
 
     return [];
 }
+
+export const readFromUrl = async (url: string): Promise<ArrayBuffer | undefined> => {
+    // Download using fetch
+    const response = await fetch(url);
+    if (!response.ok) {
+        const body = await response.text();
+        const msg = `Request to ${url} failed. Status="${response.status}". Body="${body}".`;
+        throw new Error(msg);
+    }
+
+    const buffer = await response.arrayBuffer();
+    return buffer;
+};

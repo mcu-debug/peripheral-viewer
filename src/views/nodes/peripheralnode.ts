@@ -16,13 +16,15 @@
  * IN THE SOFTWARE.
  */
 
-import { debug, TreeItem, TreeItemCollapsibleState, ThemeIcon } from 'vscode';
-import type { DebugProtocol } from 'vscode-debugprotocol';
-import { PeripheralBaseNode } from './base-node';
-import { AddrRange, AddressRangesInUse } from './address-ranges';
-import { PeripheralRegisterNode } from './register-node';
-import { PeripheralClusterNode } from './cluster-node';
-import { AccessType, hexFormat, NumberFormat, NodeSetting } from '../util';
+import * as vscode from 'vscode';
+import { PeripheralBaseNode } from './basenode';
+import { PeripheralRegisterNode } from './peripheralregisternode';
+import { PeripheralClusterNode, PeripheralRegisterOrClusterNode } from './peripheralclusternode';
+import { AddrRange, AddressRangesUtils } from '../../addrranges';
+import { NumberFormat, NodeSetting } from '../../common';
+import { MemReadUtils } from '../../memreadutils';
+import { AccessType } from '../../svd-parser';
+import { hexFormat } from '../../utils';
 
 export interface PeripheralOptions {
     name: string;
@@ -50,8 +52,8 @@ export class PeripheralNode extends PeripheralBaseNode {
 
     private currentValue: number[] = [];
 
-    constructor(options: PeripheralOptions) {
-        super(undefined);
+    constructor(public session: vscode.DebugSession, public gapThreshold: number, options: PeripheralOptions) {
+        super();
 
         this.name = options.name;
         this.baseAddress = options.baseAddress;
@@ -68,13 +70,13 @@ export class PeripheralNode extends PeripheralBaseNode {
         return this;
     }
 
-    public getTreeItem(): TreeItem | Promise<TreeItem> {
+    public getTreeItem(): vscode.TreeItem | Promise<vscode.TreeItem> {
         const label = `${this.name} @ ${hexFormat(this.baseAddress)}`;
-        const item = new TreeItem(label, this.expanded ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.Collapsed);
+        const item = new vscode.TreeItem(label, this.expanded ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.Collapsed);
         item.contextValue = this.pinned ? 'peripheral.pinned' : 'peripheral';
         item.tooltip = this.description || undefined;
         if (this.pinned) {
-            item.iconPath = new ThemeIcon('pinned');
+            item.iconPath = new vscode.ThemeIcon('pinned');
         }
         return item;
     }
@@ -92,7 +94,7 @@ export class PeripheralNode extends PeripheralBaseNode {
         this.children.sort((c1, c2) => c1.offset > c2.offset ? 1 : -1);
     }
 
-    public addChild(child: PeripheralRegisterNode | PeripheralClusterNode): void {
+    public addChild(child: PeripheralRegisterOrClusterNode): void {
         this.children.push(child);
         this.children.sort((c1, c2) => c1.offset > c2.offset ? 1 : -1);
     }
@@ -117,66 +119,64 @@ export class PeripheralNode extends PeripheralBaseNode {
         return this.format;
     }
 
-    public async updateData(): Promise<void> {
+    public async updateData(): Promise<boolean> {
         if (!this.expanded) {
-            return;
+            return false;
         }
 
         try {
             await this.readMemory();
+        } catch (e) {
+            const msg = (e as Error).message || 'unknown error';
+            const str = `Failed to update peripheral ${this.name}: ${msg}`;
+            if (vscode.debug.activeDebugConsole) {
+                vscode.debug.activeDebugConsole.appendLine(str);
+            }
+        }
+
+        try {
             const promises = this.children.map((r) => r.updateData());
             await Promise.all(promises);
+            return true;
         } catch (e) {
-            const msg = e.message || 'unknown error';
+            const msg = (e as Error).message || 'unknown error';
             const str = `Failed to update peripheral ${this.name}: ${msg}`;
-            if (debug.activeDebugConsole) {
-                debug.activeDebugConsole.appendLine(str);
+            if (vscode.debug.activeDebugConsole) {
+                vscode.debug.activeDebugConsole.appendLine(str);
             }
             throw new Error(str);
         }
     }
 
-    protected async readMemory(): Promise<void> {
+    protected readMemory(): Promise<boolean> {
         if (!this.currentValue) {
             this.currentValue = new Array<number>(this.totalLength);
         }
 
-        const promises = this.addrRanges.map(r => this.readRangeMemory(r));
-        await Promise.all(promises);
+        return MemReadUtils.readMemoryChunks(this.session, this.baseAddress, this.addrRanges, this.currentValue);
     }
 
-    protected async readRangeMemory(r: AddrRange): Promise<void> {
-        if (debug.activeDebugSession) {
-            const memoryReference = '0x' + r.base.toString(16);
-            const request: DebugProtocol.ReadMemoryArguments = {
-                memoryReference,
-                count: r.length
-            };
+    public collectRanges(): void {
+        const addresses: AddrRange[] = [];
+        this.children.map((child) => child.collectRanges(addresses));
+        addresses.sort((a, b) => (a.base < b.base) ? -1 : ((a.base > b.base) ? 1 : 0));
+        addresses.map((r) => r.base += this.baseAddress);
 
-            const response: Partial<DebugProtocol.ReadMemoryResponse> = {};
-            response.body = await debug.activeDebugSession.customRequest('readMemory', request);
-
-            if (response.body && response.body.data) {
-                const data = Buffer.from(response.body.data, 'base64');
-                let dst = r.base - this.baseAddress;
-                for (const byte of data) {
-                    this.currentValue[dst++] = byte;
+        const maxGap = this.gapThreshold;
+        let ranges: AddrRange[] = [];
+        if (maxGap >= 0) {
+            let last: AddrRange | undefined;
+            for (const r of addresses) {
+                if (last && ((last.nxtAddr() + maxGap) >= r.base)) {
+                    const max = Math.max(last.nxtAddr(), r.nxtAddr());
+                    last.length = max - last.base;
+                } else {
+                    ranges.push(r);
+                    last = r;
                 }
             }
-        }
-    }
-
-    public markAddresses(): void {
-        let ranges = [new AddrRange(this.baseAddress, this.totalLength)];   // Default range
-        const skipAddressGaps = true;
-
-        if (skipAddressGaps) {
-            // Split the entire range into a set of smaller ranges. Some svd files specify
-            // a very large address space but may use very little of it.
-            const gapThreshold = 16;    // Merge gaps less than this many bytes, avoid too many gdb requests
-            const addresses = new AddressRangesInUse(this.totalLength);
-            this.children.map((child) => child.markAddresses(addresses));
-            ranges = addresses.getAddressRangesOptimized(this.baseAddress, false, gapThreshold);
+        } else {
+            ranges = addresses;
         }
 
         // OpenOCD has an issue where the max number of bytes readable are 8191 (instead of 8192)
@@ -184,14 +184,18 @@ export class PeripheralNode extends PeripheralBaseNode {
         // but in general, it is good to split the reads up. see http://openocd.zylin.com/#/c/5109/
         // Another benefit, we can minimize gdb timeouts
         const maxBytes = (4 * 1024); // Should be a multiple of 4 to be safe for MMIO reads
-        this.addrRanges = AddressRangesInUse.splitIntoChunks(ranges, maxBytes);
+        this.addrRanges = AddressRangesUtils.splitIntoChunks(ranges, maxBytes, this.name, this.totalLength);
     }
 
     public getPeripheralNode(): PeripheralNode {
         return this;
     }
 
-    public saveState(): NodeSetting[] {
+    public selected(): Thenable<boolean> {
+        return this.performUpdate();
+    }
+
+    public saveState(_path?: string): NodeSetting[] {
         const results: NodeSetting[] = [];
 
         if (this.format !== NumberFormat.Auto || this.expanded || this.pinned) {
@@ -210,14 +214,20 @@ export class PeripheralNode extends PeripheralBaseNode {
         return results;
     }
 
-    public findByPath(path: string[]): PeripheralBaseNode | undefined {
-        if (path.length === 0) { return this; } else {
+    public findByPath(path: string[]): PeripheralBaseNode | undefined{
+        if (path.length === 0) {
+            return this;
+        } else {
             const child = this.children.find((c) => c.name === path[0]);
-            if (child) { return child.findByPath(path.slice(1)); } else { return undefined; }
+            if (child) {
+                return child.findByPath(path.slice(1));
+            } else {
+                return undefined;
+            }
         }
     }
 
-    public performUpdate(): Promise<boolean> {
+    public performUpdate(): Thenable<boolean> {
         throw new Error('Method not implemented.');
     }
 

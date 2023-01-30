@@ -16,40 +16,59 @@
  * IN THE SOFTWARE.
  */
 
-import { Command, TreeItem } from 'vscode';
-import { AddressRangesInUse } from './address-ranges';
-import { NumberFormat, NodeSetting } from '../util';
+import { Command, TreeItem, DebugSession } from 'vscode';
+import { NumberFormat, NodeSetting } from '../../common';
+import { AddrRange } from '../../addrranges';
 
-export abstract class PeripheralBaseNode {
+export abstract class BaseNode {
     public expanded: boolean;
-    public format: NumberFormat;
-    public pinned: boolean;
-    public readonly name: string | undefined;
 
-    constructor(protected readonly parent?: PeripheralBaseNode) {
+    constructor(protected readonly parent?: BaseNode) {
         this.expanded = false;
-        this.format = NumberFormat.Auto;
-        this.pinned = false;
     }
+
+    public getParent(): BaseNode | undefined {
+        return this.parent;
+    }
+
+    public abstract getChildren(): BaseNode[] | Promise<BaseNode[]>;
+    public abstract getTreeItem(): TreeItem | Promise<TreeItem>;
 
     public getCommand(): Command | undefined {
         return undefined;
     }
 
-    public getParent(): PeripheralBaseNode | undefined {
-        return this.parent;
+    public abstract getCopyValue(): string | undefined;
+}
+
+export abstract class PeripheralBaseNode extends BaseNode {
+    public format: NumberFormat;
+    public pinned: boolean;
+    public readonly name: string | undefined;
+    public session: DebugSession | undefined;
+
+    constructor(protected readonly parent?: PeripheralBaseNode) {
+        super(parent);
+        this.format = NumberFormat.Auto;
+        this.pinned = false;
     }
 
-    public abstract getCopyValue(): string | undefined;
-    public abstract performUpdate(): Promise<boolean>;
-    public abstract updateData(): Promise<void>;
+    public selected(): Thenable<boolean> {
+        return Promise.resolve(false);
+    }
+
+    public abstract performUpdate(): Thenable<boolean>;
+    public abstract updateData(): Thenable<boolean>;
 
     public abstract getChildren(): PeripheralBaseNode[] | Promise<PeripheralBaseNode[]>;
     public abstract getPeripheral(): PeripheralBaseNode | undefined;
-    public abstract getTreeItem(): TreeItem | Promise<TreeItem>;
 
-    public abstract markAddresses(a: AddressRangesInUse): void;
+    public abstract collectRanges(ary: AddrRange[]): void;      // Append addr range(s) to array
 
     public abstract saveState(path?: string): NodeSetting[];
     public abstract findByPath(path: string[]): PeripheralBaseNode | undefined;
+}
+
+export abstract class ClusterOrRegisterBaseNode extends PeripheralBaseNode {
+    public readonly offset: number | undefined;
 }

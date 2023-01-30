@@ -16,14 +16,16 @@
  * IN THE SOFTWARE.
  */
 
-import { window, debug, TreeItem, TreeItemCollapsibleState, MarkdownString } from 'vscode';
-import type { DebugProtocol } from 'vscode-debugprotocol';
-import { PeripheralNode } from './peripheral-node';
-import { PeripheralClusterNode } from './cluster-node';
-import { PeripheralBaseNode } from './base-node';
-import { PeripheralFieldNode } from './field-node';
-import { AddressRangesInUse } from './address-ranges';
-import { AccessType, extractBits, createMask, hexFormat, binaryFormat, NumberFormat, NodeSetting } from '../util';
+import * as vscode from 'vscode';
+import { PeripheralNode } from './peripheralnode';
+import { PeripheralClusterNode } from './peripheralclusternode';
+import { ClusterOrRegisterBaseNode, PeripheralBaseNode } from './basenode';
+import { PeripheralFieldNode } from './peripheralfieldnode';
+import { extractBits, createMask, hexFormat, binaryFormat } from '../../utils';
+import { NumberFormat, NodeSetting } from '../../common';
+import { AccessType } from '../../svd-parser';
+import { AddrRange } from '../../addrranges';
+import { MemReadUtils } from '../../memreadutils';
 
 export interface PeripheralRegisterOptions {
     name: string;
@@ -34,7 +36,7 @@ export interface PeripheralRegisterOptions {
     resetValue?: number;
 }
 
-export class PeripheralRegisterNode extends PeripheralBaseNode {
+export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
     public children: PeripheralFieldNode[];
     public readonly name: string;
     public readonly description?: string;
@@ -48,6 +50,7 @@ export class PeripheralRegisterNode extends PeripheralBaseNode {
     private hexRegex: RegExp;
     private binaryRegex: RegExp;
     private currentValue: number;
+    private prevValue = '';
 
     constructor(public parent: PeripheralNode | PeripheralClusterNode, options: PeripheralRegisterOptions) {
         super(parent);
@@ -77,51 +80,62 @@ export class PeripheralRegisterNode extends PeripheralBaseNode {
         return extractBits(this.currentValue, offset, width);
     }
 
-    public async updateBits(offset: number, width: number, value: number): Promise<boolean> {
-        const limit = Math.pow(2, width);
-        if (value > limit) {
-            throw new Error(`Value entered is invalid. Maximum value for this field is ${limit - 1} (${hexFormat(limit - 1, 0)})`);
-        }
-
-        const mask = createMask(offset, width);
-        const sv = value << offset;
-        const newval = (this.currentValue & ~mask) | sv;
-        return this.updateValueInternal(newval);
+    public updateBits(offset: number, width: number, value: number): Thenable<boolean> {
+        return new Promise((resolve, reject) => {
+            const limit = Math.pow(2, width);
+            if (value > limit) {
+                return reject(`Value entered is invalid. Maximum value for this field is ${limit - 1} (${hexFormat(limit - 1, 0)})`);
+            } else {
+                const mask = createMask(offset, width);
+                const sv = value << offset;
+                const newval = (this.currentValue & ~mask) | sv;
+                this.updateValueInternal(newval).then(resolve, reject);
+            }
+        });
     }
 
-    public getTreeItem(): TreeItem | Promise<TreeItem> {
+    public getTreeItem(): vscode.TreeItem | Promise<vscode.TreeItem> {
         const label = `${this.name} @ ${hexFormat(this.offset, 0)}`;
         const collapseState = this.children && this.children.length > 0
-            ? (this.expanded ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.Collapsed)
-            : TreeItemCollapsibleState.None;
+            ? (this.expanded ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.Collapsed)
+            : vscode.TreeItemCollapsibleState.None;
 
-        const item = new TreeItem(label, collapseState);
+        const displayValue = this.getFormattedValue(this.getFormat());
+        const labelItem: vscode.TreeItemLabel = {
+            label: label + ' ' + displayValue
+        };
+        if (displayValue !== this.prevValue) {
+            labelItem.highlights = [[label.length + 1, labelItem.label.length]];
+            this.prevValue = displayValue;
+        }
+        const item = new vscode.TreeItem(labelItem, collapseState);
         item.contextValue = this.accessType === AccessType.ReadWrite ? 'registerRW' : (this.accessType === AccessType.ReadOnly ? 'registerRO' : 'registerWO');
-        item.tooltip = this.generateTooltipMarkdown();
-        item.description = this.getFormattedValue(this.getFormat());
+        item.tooltip = this.generateTooltipMarkdown() || undefined;
 
         return item;
     }
 
-    private generateTooltipMarkdown(): MarkdownString | undefined {
-        const mds = new MarkdownString('', true);
+    private generateTooltipMarkdown(): vscode.MarkdownString | null {
+        const mds = new vscode.MarkdownString('', true);
         mds.isTrusted = true;
 
-        const address = `${hexFormat(this.getAddress())}`;
+        const address = `${ hexFormat(this.getAddress()) }`;
 
         const formattedValue = this.getFormattedValue(this.getFormat());
 
         const roLabel = this.accessType === AccessType.ReadOnly ? '(Read Only)' : '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
 
-        mds.appendMarkdown(`| ${this.name}@${address} | ${roLabel} | *${formattedValue}* |\n`);
+        mds.appendMarkdown(`| ${ this.name }@${ address } | ${ roLabel } | *${ formattedValue }* |\n`);
         mds.appendMarkdown('|:---|:---:|---:|\n\n');
 
         if (this.accessType !== AccessType.WriteOnly) {
-            mds.appendMarkdown(`**Reset Value:** ${this.getFormattedResetValue(this.getFormat())}\n`);
+            mds.appendMarkdown(`**Reset Value:** ${ this.getFormattedResetValue(this.getFormat()) }\n`);
         }
 
         mds.appendMarkdown('\n____\n\n');
-        mds.appendMarkdown(this.description || 'no description');
+        if (this.description) {
+            mds.appendMarkdown(this.description);
+        }
 
         mds.appendMarkdown('\n_____\n\n');
 
@@ -130,13 +144,13 @@ export class PeripheralRegisterNode extends PeripheralBaseNode {
             return mds;
         }
 
-        const hex = this.getFormattedValue(NumberFormat.Hexidecimal);
+        const hex = this.getFormattedValue(NumberFormat.Hexadecimal);
         const decimal = this.getFormattedValue(NumberFormat.Decimal);
         const binary = this.getFormattedValue(NumberFormat.Binary);
 
         mds.appendMarkdown('| Hex &nbsp;&nbsp; | Decimal &nbsp;&nbsp; | Binary &nbsp;&nbsp; |\n');
         mds.appendMarkdown('|:---|:---|:---|\n');
-        mds.appendMarkdown(`| ${hex} &nbsp;&nbsp; | ${decimal} &nbsp;&nbsp; | ${binary} &nbsp;&nbsp; |\n\n`);
+        mds.appendMarkdown(`| ${ hex } &nbsp;&nbsp; | ${ decimal } &nbsp;&nbsp; | ${ binary } &nbsp;&nbsp; |\n\n`);
 
         const children = this.getChildren();
         if (children.length === 0) { return mds; }
@@ -146,7 +160,8 @@ export class PeripheralRegisterNode extends PeripheralBaseNode {
         mds.appendMarkdown('|:---|:---:|:---|:---|\n');
 
         children.forEach((field) => {
-            mds.appendMarkdown(`| ${field.name} | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | ${field.getFormattedRange()} | ${field.getFormattedValue(field.getFormat(), true)} |\n`);
+            mds.appendMarkdown(`| ${ field.name } | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | ${ field.getFormattedRange() } | `
+                + `${ field.getFormattedValue(field.getFormat(), true) } |\n`);
         });
 
         return mds;
@@ -213,13 +228,12 @@ export class PeripheralRegisterNode extends PeripheralBaseNode {
     }
 
     public async performUpdate(): Promise<boolean> {
-        const val = await window.showInputBox({ prompt: 'Enter new value: (prefix hex with 0x, binary with 0b)', value: this.getCopyValue() });
+        const val = await vscode.window.showInputBox({ prompt: 'Enter new value: (prefix hex with 0x, binary with 0b)', value: this.getCopyValue() });
         if (!val) {
             return false;
         }
 
         let numval: number;
-
         if (val.match(this.hexRegex)) {
             numval = parseInt(val.substr(2), 16);
         } else if (val.match(this.binaryRegex)) {
@@ -241,57 +255,36 @@ export class PeripheralRegisterNode extends PeripheralBaseNode {
     }
 
     private async updateValueInternal(value: number): Promise<boolean> {
-        const memoryReference = '0x' + this.parent.getAddress(this.offset).toString(16);
-        const bytes: string[] = [];
-        const numbytes = this.size / 8;
-
-        for (let i = 0; i < numbytes; i++) {
-            const byte = value & 0xFF;
-            value = value >>> 8;
-            let bs = byte.toString(16);
-            if (bs.length === 1) { bs = '0' + bs; }
-            bytes[i] = bs;
+        if (!vscode.debug.activeDebugSession) {
+            return false;
         }
 
-        const data = Buffer.from(bytes).toString('base64');
-        if (debug.activeDebugSession) {
-            const request: DebugProtocol.WriteMemoryArguments = {
-                memoryReference,
-                data
-            };
-
-            await debug.activeDebugSession.customRequest('writeMemory', request);
-            this.parent.updateData();
-            return true;
-        }
-
-        return false;
+        await MemReadUtils.writeMemory(vscode.debug.activeDebugSession, this.parent.getAddress(this.offset), value, this.size);
+        await this.parent.updateData();
+        return true;
     }
 
-    public async updateData(): Promise<void> {
-        try {
-            const bc = this.size / 8;
-            const bytes = this.parent.getBytes(this.offset, bc);
-            const buffer = Buffer.from(bytes);
-            switch (bc) {
-                case 1:
-                    this.currentValue = buffer.readUInt8(0);
-                    break;
-                case 2:
-                    this.currentValue = buffer.readUInt16LE(0);
-                    break;
-                case 4:
-                    this.currentValue = buffer.readUInt32LE(0);
-                    break;
-                default:
-                    window.showErrorMessage(`Register ${this.name} has invalid size: ${this.size}. Should be 8, 16 or 32.`);
-                    break;
-            }
-        } catch (error) {
-            window.showErrorMessage(`Register failed to update: ${error}`);
+    public updateData(): Thenable<boolean> {
+        const bc = this.size / 8;
+        const bytes = this.parent.getBytes(this.offset, bc);
+        const buffer = Buffer.from(bytes);
+        switch (bc) {
+            case 1:
+                this.currentValue = buffer.readUInt8(0);
+                break;
+            case 2:
+                this.currentValue = buffer.readUInt16LE(0);
+                break;
+            case 4:
+                this.currentValue = buffer.readUInt32LE(0);
+                break;
+            default:
+                vscode.window.showErrorMessage(`Register ${this.name} has invalid size: ${this.size}. Should be 8, 16 or 32.`);
+                break;
         }
-
         this.children.forEach((f) => f.updateData());
+
+        return Promise.resolve(true);
     }
 
     public saveState(path?: string): NodeSetting[] {
@@ -309,18 +302,22 @@ export class PeripheralRegisterNode extends PeripheralBaseNode {
     }
 
     public findByPath(path: string[]): PeripheralBaseNode | undefined {
-        if (path.length === 0) { return this; } else if (path.length === 1) {
+        if (path.length === 0) {
+            return this;
+        } else if (path.length === 1) {
             const child = this.children.find((c) => c.name === path[0]);
             return child;
-        } else { return undefined; }
+        } else {
+            return undefined;
+        }
     }
 
     public getPeripheral(): PeripheralBaseNode {
         return this.parent.getPeripheral();
     }
 
-    public markAddresses(addrs: AddressRangesInUse): void {
+    public collectRanges(addrs: AddrRange[]): void {
         const finalOffset = this.parent.getOffset(this.offset);
-        addrs.setAddrRange(finalOffset, this.size / 8);
+        addrs.push(new AddrRange(finalOffset, this.size / 8));
     }
 }

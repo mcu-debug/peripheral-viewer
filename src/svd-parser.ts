@@ -16,13 +16,20 @@
  * IN THE SOFTWARE.
  */
 
-import { PeripheralRegisterNode } from './nodes/register-node';
-import { PeripheralClusterNode } from './nodes/cluster-node';
-import { PeripheralNode } from './nodes/peripheral-node';
-import { PeripheralFieldNode, EnumerationMap, EnumeratedValue, FieldOptions } from './nodes/field-node';
-import { parseInteger, parseDimIndex, AccessType } from './util';
-
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
+import * as vscode from 'vscode';
+import { PeripheralRegisterNode } from './views/nodes/peripheralregisternode';
+import { PeripheralClusterNode, PeripheralOrClusterNode } from './views/nodes/peripheralclusternode';
+import { PeripheralFieldNode, EnumerationMap, EnumeratedValue } from './views/nodes/peripheralfieldnode';
+import { PeripheralNode } from './views/nodes/peripheralnode';
+import { parseInteger, parseDimIndex } from './utils';
+
+export enum AccessType {
+    ReadOnly = 1,
+    ReadWrite,
+    WriteOnly
+}
 
 const accessTypeFromString = (type: string): AccessType => {
     switch (type) {
@@ -41,14 +48,34 @@ const accessTypeFromString = (type: string): AccessType => {
     }
 };
 
+export interface Peripheral {
+    name: string[];
+}
+
+export interface Device {
+    resetValue: string[];
+    size: string[];
+    access: string[];
+    peripherals: {
+        peripheral: Peripheral[]
+    }[];
+}
+
+export interface SvdData {
+    device: Device;
+}
+
 export class SVDParser {
     private static enumTypeValuesMap: { [key: string]: any } = {};
     private static peripheralRegisterMap: { [key: string]: any } = {};
+    private static gapThreshold: number;
 
-    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-    public static async parseSVD(data: any): Promise<PeripheralNode[]> {
+    public static async parseSVD(
+        session: vscode.DebugSession, svdData: SvdData, gapThreshold: number): Promise<PeripheralNode[]> {
+        SVDParser.gapThreshold = gapThreshold;
         SVDParser.enumTypeValuesMap = {};
         SVDParser.peripheralRegisterMap = {};
+
         const peripheralMap: { [key: string]: any } = {};
         const defaultOptions = {
             accessType: AccessType.ReadWrite,
@@ -56,21 +83,22 @@ export class SVDParser {
             resetValue: 0x0
         };
 
-        if (data.device.resetValue) {
-            defaultOptions.resetValue = parseInteger(data.device.resetValue[0]) || 0;
+        if (svdData.device.resetValue) {
+            defaultOptions.resetValue = parseInteger(svdData.device.resetValue[0]) || 0;
         }
-        if (data.device.size) {
-            defaultOptions.size = parseInteger(data.device.size[0]) || 0;
+        if (svdData.device.size) {
+            defaultOptions.size = parseInteger(svdData.device.size[0]) || 0;
         }
-        if (data.device.access) {
-            defaultOptions.accessType = accessTypeFromString(data.device.access[0]);
+        if (svdData.device.access) {
+            defaultOptions.accessType = accessTypeFromString(svdData.device.access[0]);
         }
 
-        data.device.peripherals[0].peripheral.forEach((element: any) => {
+        svdData.device.peripherals[0].peripheral.forEach((element) => {
             const name = element.name[0];
             peripheralMap[name] = element;
         });
 
+        // tslint:disable-next-line:forin
         for (const key in peripheralMap) {
             const element = peripheralMap[key];
             if (element.$ && element.$.derivedFrom) {
@@ -80,14 +108,15 @@ export class SVDParser {
         }
 
         const peripherials = [];
+        // tslint:disable-next-line:forin
         for (const key in peripheralMap) {
-            peripherials.push(SVDParser.parsePeripheral(peripheralMap[key]));
+            peripherials.push(SVDParser.parsePeripheral(session, peripheralMap[key], defaultOptions));
         }
 
         peripherials.sort(PeripheralNode.compare);
 
         for (const p of peripherials) {
-            p.markAddresses();
+            p.collectRanges();
         }
 
         return peripherials;
@@ -100,7 +129,7 @@ export class SVDParser {
     private static parseFields(fieldInfo: any[], parent: PeripheralRegisterNode): PeripheralFieldNode[] {
         const fields: PeripheralFieldNode[] = [];
 
-        if (fieldInfo === undefined) {
+        if (fieldInfo == null) {
             return fields;
         }
 
@@ -132,6 +161,7 @@ export class SVDParser {
                     offset = lsb;
                 }
             } else {
+                // tslint:disable-next-line:max-line-length
                 throw new Error(`Unable to parse SVD file: field ${f.name[0]} must have either bitOffset and bitWidth elements, bitRange Element, or msb and lsb elements.`);
             }
 
@@ -139,50 +169,52 @@ export class SVDParser {
             if (f.enumeratedValues) {
                 valueMap = {};
                 const eValues = f.enumeratedValues[0];
-                if (eValues) {
-                    if (eValues.$ && eValues.$.derivedFrom) {
-                        const found = SVDParser.enumTypeValuesMap[eValues.$.derivedFrom];
-                        if (!found) {
-                            throw new Error(`Invalid derivedFrom=${eValues.$.derivedFrom} for enumeratedValues of field ${f.name[0]}`);
-                        }
-                        valueMap = found;
-                    } else {
-                        if (eValues.enumeratedValue) {
-                            eValues.enumeratedValue.map((ev: any) => {
-                                if (ev.value && ev.value.length > 0) {
-                                    const evname = ev.name[0];
-                                    const evdesc = this.cleanupDescription(ev.description ? ev.description[0] : '');
-                                    const val = ev.value[0].toLowerCase();
-                                    const evvalue = parseInteger(val);
+                if (eValues.$ && eValues.$.derivedFrom) {
+                    const found = SVDParser.enumTypeValuesMap[eValues.$.derivedFrom];
+                    if (!found) {
+                        throw new Error(`Invalid derivedFrom=${eValues.$.derivedFrom} for enumeratedValues of field ${f.name[0]}`);
+                    }
+                    valueMap = found;
+                } else if (eValues) {
+                    if (eValues.enumeratedValue) {
+                        eValues.enumeratedValue.map((ev: any) => {
+                            if (ev.value && ev.value.length > 0) {
+                                const evname = ev.name[0];
+                                const evdesc = this.cleanupDescription(ev.description ? ev.description[0] : '');
+                                const val = ev.value[0].toLowerCase();
+                                const evvalue = parseInteger(val);
 
-                                    if (valueMap && evvalue) {
-                                        valueMap[evvalue] = new EnumeratedValue(evname, evdesc, evvalue);
-                                    }
+                                if (valueMap && evvalue) {
+                                    valueMap[evvalue] = new EnumeratedValue(evname, evdesc, evvalue);
                                 }
-                            });
-                        }
-
-                        // According to the SVD spec/schema, I am not sure any scope applies. Seems like everything is in a global name space
-                        // No make sense but how I am interpreting it for now. Easy to make it scope based but then why allow referencing
-                        // other peripherals. Global scope it is. Overrides dups from previous definitions!!!
-                        if (eValues.name && eValues.name[0]) {
-                            let evName = eValues.name[0];
-                            for (const prefix of [undefined, f.name[0], parent.name, parent.parent.name]) {
-                                evName = prefix ? prefix + '.' + evName : evName;
-                                SVDParser.enumTypeValuesMap[evName] = valueMap;
                             }
+                        });
+                    }
+
+                    // According to the SVD spec/schema, I am not sure any scope applies. Seems like everything is in a global name space
+                    // No make sense but how I am interpreting it for now. Easy to make it scope based but then why allow referencing
+                    // other peripherals. Global scope it is. Overrides dups from previous definitions!!!
+                    if (eValues.name && eValues.name[0]) {
+                        let evName = eValues.name[0];
+                        for (const prefix of [null, f.name[0], parent.name, parent.parent.name]) {
+                            evName = prefix ? prefix + '.' + evName : evName;
+                            SVDParser.enumTypeValuesMap[evName] = valueMap;
                         }
                     }
                 }
             }
 
-            const baseOptions: FieldOptions = {
+            const baseOptions: any = {
                 name: f.name[0],
                 description: description,
-                offset: offset || 0,
-                width: width || 0,
+                offset: offset,
+                width: width,
                 enumeration: valueMap
             };
+
+            if (f.access) {
+                baseOptions.accessType = accessTypeFromString(f.access[0]);
+            }
 
             if (f.dim) {
                 if (!f.dimIncrement) { throw new Error(`Unable to parse SVD file: field ${f.name[0]} has dim element, with no dimIncrement element.`); }
@@ -215,8 +247,8 @@ export class SVDParser {
         return fields;
     }
 
-    private static parseRegisters(regInfo_: any[], parent: PeripheralNode | PeripheralClusterNode): PeripheralRegisterNode[] {
-        const regInfo = [...regInfo_];      // Make a shallow copy,. we will work on this
+    private static parseRegisters(regInfoOrig: any[], parent: PeripheralNode | PeripheralClusterNode): PeripheralRegisterNode[] {
+        const regInfo = [...regInfoOrig];      // Make a shallow copy,. we will work on this
         const registers: PeripheralRegisterNode[] = [];
 
         const localRegisterMap: { [key: string]: any } = {};
@@ -313,13 +345,19 @@ export class SVDParser {
         }
 
         registers.sort((a, b) => {
-            if (a.offset < b.offset) { return -1; } else if (a.offset > b.offset) { return 1; } else { return 0; }
+            if (a.offset < b.offset) {
+                return -1;
+            } else if (a.offset > b.offset) {
+                return 1;
+            } else {
+                return 0;
+            }
         });
 
         return registers;
     }
 
-    private static parseClusters(clusterInfo: any, parent: PeripheralNode): PeripheralClusterNode[] {
+    private static parseClusters(clusterInfo: any, parent: PeripheralOrClusterNode): PeripheralClusterNode[] {
         const clusters: PeripheralClusterNode[] = [];
 
         if (!clusterInfo) { return []; }
@@ -367,6 +405,9 @@ export class SVDParser {
                             if (c.register) {
                                 SVDParser.parseRegisters(c.register, cluster);
                             }
+                            if (c.cluster) {
+                                SVDParser.parseClusters(c.cluster, cluster);
+                            }
                             clusters.push(cluster);
                         }
                     }
@@ -383,14 +424,17 @@ export class SVDParser {
                     SVDParser.parseRegisters(c.register, cluster);
                     clusters.push(cluster);
                 }
+                if (c.cluster) {
+                    SVDParser.parseClusters(c.cluster, cluster);
+                    clusters.push(cluster);
+                }
             }
-
         });
 
         return clusters;
     }
 
-    private static parsePeripheral(p: any): PeripheralNode {
+    private static parsePeripheral(session: vscode.DebugSession, p: any, _defaults: { accessType: AccessType, size: number, resetValue: number }): PeripheralNode {
         let totalLength = 0;
         if (p.addressBlock) {
             for (const ab of p.addressBlock) {
@@ -414,7 +458,7 @@ export class SVDParser {
         if (p.resetValue) { options.resetValue = parseInteger(p.resetValue[0]); }
         if (p.groupName) { options.groupName = p.groupName[0]; }
 
-        const peripheral = new PeripheralNode(options);
+        const peripheral = new PeripheralNode(session, SVDParser.gapThreshold, options);
 
         if (p.registers) {
             if (p.registers[0].register) {

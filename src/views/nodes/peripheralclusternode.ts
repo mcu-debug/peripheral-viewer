@@ -16,12 +16,14 @@
  * IN THE SOFTWARE.
  */
 
-import { TreeItem, TreeItemCollapsibleState } from 'vscode';
-import { PeripheralBaseNode } from './base-node';
-import { PeripheralRegisterNode } from './register-node';
-import { PeripheralNode } from './peripheral-node';
-import { AddressRangesInUse } from './address-ranges';
-import { AccessType, hexFormat, NodeSetting, NumberFormat } from '../util';
+import * as vscode from 'vscode';
+import { PeripheralBaseNode, ClusterOrRegisterBaseNode } from './basenode';
+import { PeripheralRegisterNode } from './peripheralregisternode';
+import { PeripheralNode } from './peripheralnode';
+import { AccessType } from '../../svd-parser';
+import { NodeSetting, NumberFormat } from '../../common';
+import { AddrRange } from '../../addrranges';
+import { hexFormat } from '../../utils';
 
 export interface ClusterOptions {
     name: string;
@@ -32,8 +34,11 @@ export interface ClusterOptions {
     resetValue?: number;
 }
 
-export class PeripheralClusterNode extends PeripheralBaseNode {
-    private children: PeripheralRegisterNode[];
+export type PeripheralOrClusterNode = PeripheralNode | PeripheralClusterNode;
+export type PeripheralRegisterOrClusterNode = PeripheralRegisterNode | PeripheralClusterNode;
+
+export class PeripheralClusterNode extends ClusterOrRegisterBaseNode {
+    private children: PeripheralRegisterOrClusterNode[];
     public readonly name: string;
     public readonly description?: string;
     public readonly offset: number;
@@ -41,7 +46,7 @@ export class PeripheralClusterNode extends PeripheralBaseNode {
     public readonly resetValue: number;
     public readonly accessType: AccessType;
 
-    constructor(public parent: PeripheralNode, options: ClusterOptions) {
+    constructor(public parent: PeripheralOrClusterNode, options: ClusterOptions) {
         super(parent);
         this.name = options.name;
         this.description = options.description;
@@ -53,28 +58,28 @@ export class PeripheralClusterNode extends PeripheralBaseNode {
         this.parent.addChild(this);
     }
 
-    public getTreeItem(): TreeItem | Promise<TreeItem> {
+    public getTreeItem(): vscode.TreeItem | Promise<vscode.TreeItem> {
         const label = `${this.name} [${hexFormat(this.offset, 0)}]`;
 
-        const item = new TreeItem(label, this.expanded ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.Collapsed);
+        const item = new vscode.TreeItem(label, this.expanded ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.Collapsed);
         item.contextValue = 'cluster';
         item.tooltip = this.description || undefined;
 
         return item;
     }
 
-    public getChildren(): PeripheralRegisterNode[] {
+    public getChildren(): PeripheralRegisterOrClusterNode[] {
         return this.children;
     }
 
-    public setChildren(children: PeripheralRegisterNode[]): void {
+    public setChildren(children: PeripheralRegisterOrClusterNode[]): void {
         this.children = children.slice(0, children.length);
-        this.children.sort((r1, r2) => r1.offset > r2.offset ? 1 : -1);
+        this.children.sort((c1, c2) => c1.offset > c2.offset ? 1 : -1);
     }
 
-    public addChild(child: PeripheralRegisterNode): void {
+    public addChild(child: PeripheralRegisterOrClusterNode): void {
         this.children.push(child);
-        this.children.sort((r1, r2) => r1.offset > r2.offset ? 1 : -1);
+        this.children.sort((c1, c2) => c1.offset > c2.offset ? 1 : -1);
     }
 
     public getBytes(offset: number, size: number): Uint8Array {
@@ -85,17 +90,27 @@ export class PeripheralClusterNode extends PeripheralBaseNode {
         return this.parent.getAddress(this.offset + offset);
     }
 
-    public getOffset(offset: number): number  {
+    public getOffset(offset: number): number {
         return this.parent.getOffset(this.offset + offset);
     }
 
     public getFormat(): NumberFormat {
-        if (this.format !== NumberFormat.Auto) { return this.format; } else { return this.parent.getFormat(); }
+        if (this.format !== NumberFormat.Auto) {
+            return this.format;
+        } else {
+            return this.parent.getFormat();
+        }
     }
 
-    public async updateData(): Promise<void> {
-        const promises = this.children.map((r) => r.updateData());
-        await Promise.all(promises);
+    public updateData(): Thenable<boolean> {
+        return new Promise((resolve, reject) => {
+            const promises = this.children.map((r) => r.updateData());
+            Promise.all(promises).then(() => {
+                resolve(true);
+            }).catch(() => {
+                reject('Failed');
+            });
+        });
     }
 
     public saveState(path: string): NodeSetting[] {
@@ -113,14 +128,20 @@ export class PeripheralClusterNode extends PeripheralBaseNode {
     }
 
     public findByPath(path: string[]): PeripheralBaseNode | undefined {
-        if (path.length === 0) { return this; } else {
+        if (path.length === 0) {
+            return this;
+        } else {
             const child = this.children.find((c) => c.name === path[0]);
-            if (child) { return child.findByPath(path.slice(1)); } else { return undefined; }
+            if (child) {
+                return child.findByPath(path.slice(1));
+            } else {
+                return undefined;
+            }
         }
     }
 
-    public markAddresses(addrs: AddressRangesInUse): void {
-        this.children.map((r) => { r.markAddresses(addrs); });
+    public collectRanges(ary: AddrRange[]): void {
+        this.children.map((r) => { r.collectRanges(ary); });
     }
 
     public getPeripheral(): PeripheralBaseNode {
@@ -131,7 +152,7 @@ export class PeripheralClusterNode extends PeripheralBaseNode {
         throw new Error('Method not implemented.');
     }
 
-    public performUpdate(): Promise<boolean> {
+    public performUpdate(): Thenable<boolean> {
         throw new Error('Method not implemented.');
     }
 }
