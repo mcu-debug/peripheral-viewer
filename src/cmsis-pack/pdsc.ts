@@ -134,6 +134,23 @@ export const getDevices = (pack: PDSC): Array<Device | DeviceVariant> => {
 };
 
 /**
+ * Return list of processor names available for specified device
+ */
+export const getProcessors = (device: Device): string[] => {
+    const processors: string[] = [];
+
+    if (device.processor) {
+        for (const processor of device.processor) {
+            if (processor.$ && processor.$.Pname) {
+                processors.push(processor.$.Pname);
+            }
+        }
+    }
+
+    return processors;
+};
+
+/**
  * Return svd path (or undefined) for specified device
  * If processorName specified, matching svd file is returned, else the first one
  */

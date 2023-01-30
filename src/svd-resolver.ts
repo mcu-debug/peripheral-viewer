@@ -8,7 +8,7 @@ import { isAbsolute, join, normalize } from 'path';
 import { parseStringPromise } from 'xml2js';
 import { SvdRegistry } from './svd-registry';
 import { parsePackString, pdscFromPack, fileFromPack } from './cmsis-pack/pack-utils';
-import { PDSC, Device, DeviceVariant, getDevices, getSvdPath } from './cmsis-pack/pdsc';
+import { PDSC, Device, DeviceVariant, getDevices, getSvdPath, getProcessors } from './cmsis-pack/pdsc';
 import { readFromUrl } from './utils';
 import { getSelection } from './vscode-utils';
 
@@ -24,7 +24,7 @@ export class SvdResolver {
         const deviceName = session.configuration[deviceConfig];
 
         const processorConfig = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<string>(manifest.CONFIG_PROCESSOR) || manifest.DEFAULT_PROCESSOR;
-        const processorName = session.configuration[processorConfig];
+        let processorName = session.configuration[processorConfig];
 
         if (!svdPath && !deviceName) {
             return undefined;
@@ -58,6 +58,7 @@ export class SvdResolver {
                         deviceMap.set(getDeviceName(device), device);
                     }
 
+                    // Select device
                     let packDevice: Device | undefined;
 
                     if (deviceName && deviceMap.has(deviceName)) {
@@ -81,6 +82,29 @@ export class SvdResolver {
 
                     if (!packDevice) {
                         return;
+                    }
+
+                    // Load processors for device
+                    const processors = getProcessors(packDevice);
+
+                    // Select processor
+                    if (processorName && processors.includes(processorName)) {
+                        // Keep existing processor name
+                    } else if (!processorName && processors.length == 1) {
+                        processorName = processors[0];
+                    } else {
+                        // Ask user which processor to use
+                        const items = processors.map(label => ({ label }));
+                        const selected = await getSelection('Select a processor', items, processorName);
+                        if (!selected) {
+                            return;
+                        }
+    
+                        if (!processors.includes(selected)) {
+                            throw new Error(`Processor not found: ${selected}`);
+                        }
+
+                        processorName = selected;
                     }
 
                     const svdFile = getSvdPath(packDevice, processorName);
