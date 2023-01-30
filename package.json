@@ -231,7 +231,7 @@
         },
         "svd-viewer.deviceConfig": {
           "type": "string",
-          "default": "device",
+          "default": "deviceName",
           "description": "Debug configuration key to use to get the device"
         },
         "svd-viewer.svdAddrGapThreshold": {
