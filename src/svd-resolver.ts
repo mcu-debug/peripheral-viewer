@@ -26,6 +26,7 @@ export class SvdResolver {
                 const pack = parsePackString(svdPath);
 
                 if (pack) {
+                    const getDeviceName = (device: Device) => (device as DeviceVariant).$.Dvariant || device.$.Dname;
                     const assetBase = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<string>(manifest.CONFIG_ASSET_PATH) || manifest.DEFAULT_ASSET_PATH;
                     const pdscPath = pdscFromPack(assetBase, pack);
                     const pdscBuffer = await readFromUrl(pdscPath.toString());
@@ -45,36 +46,41 @@ export class SvdResolver {
                     const devices = getDevices(pdsc);
                     const deviceMap = new Map();
                     for (const dev of devices) {
-                        const deviceName = (dev as DeviceVariant).$.Dvariant || dev.$.Dname;
-                        deviceMap.set(deviceName, device);
+                        deviceMap.set(getDeviceName(dev), dev);
                     }
 
                     let packDevice: Device | undefined;
 
                     if (device && deviceMap.has(device)) {
                         packDevice = deviceMap.get(device);
+                    } else if (!device && devices.length == 1) {
+                        packDevice = devices[0];
                     } else {
                         // Ask user which device to use
                         const items = [...deviceMap.keys()];
                         const selected = await getSelection('Select a device', items, device);
-                        if (selected) {
-                            if (!deviceMap.has(selected)) {
-                                throw new Error(`Device not found: ${selected}`);
-                            }
-
-                            packDevice = deviceMap.get(selected);
+                        if (!selected) {
+                            return;
                         }
+    
+                        if (!deviceMap.has(selected)) {
+                            throw new Error(`Device not found: ${selected}`);
+                        }
+
+                        packDevice = deviceMap.get(selected);
                     }
 
                     if (!packDevice) {
-                        return undefined;
+                        return;
                     }
 
                     const svdFile = getSvdPath(packDevice);
-                    if (svdFile) {
-                        const svdUri = fileFromPack(assetBase, pack, svdFile);
-                        svdPath = svdUri.toString();
+                    if (!svdFile) {
+                        throw new Error(`Unable to load device ${getDeviceName(packDevice)}`);
                     }
+
+                    const svdUri = fileFromPack(assetBase, pack, svdFile);
+                    svdPath = svdUri.toString();
                 } else if (vscode.env.uiKind === vscode.UIKind.Desktop && !svdPath.startsWith('http')) {
                     // On desktop, ensure full path
                     if (!isAbsolute(svdPath) && wsFolderPath) {
