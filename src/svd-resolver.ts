@@ -57,7 +57,6 @@ export class SvdResolver {
     }
 
     protected async loadFromPack(pack: Pack, deviceName: string | undefined, processorName: string | undefined): Promise<string | undefined> {
-
         const getDeviceName = (device: Device) => (device as DeviceVariant).$.Dvariant || device.$.Dname;
 
         const assetBase = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<string>(manifest.CONFIG_ASSET_PATH) || manifest.DEFAULT_ASSET_PATH;
