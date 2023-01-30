@@ -30,7 +30,7 @@ import { SvdResolver } from '../svd-resolver';
 import { readFromUrl } from '../utils';
 import { uriExists } from '../vscode-utils';
 
-const STATE_FILENAME = '.svd-viewer.state.json';
+const STATE_FILENAME = '.svd-viewer.json';
 
 const pathToUri = (path: string): vscode.Uri => {
     try {
