@@ -298,14 +298,8 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
     }
 
     public async debugSessionStarted(session: vscode.DebugSession): Promise<void> {
-        const svdConfig = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<string>(manifest.CONFIG_SVD_PATH) || manifest.DEFAULT_SVD_PATH;
-        const svd = session.configuration[svdConfig];
-
-        const deviceConfig = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<string>(manifest.CONFIG_DEVICE) || manifest.DEFAULT_DEVICE;
-        const device = session.configuration[deviceConfig];
-
         const wsFolderPath = session.workspaceFolder ? session.workspaceFolder.uri : vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders[0].uri;
-        const svdPath = await this.resolver.resolve(svd, device, wsFolderPath);
+        const svdPath = await this.resolver.resolve(session, wsFolderPath);
 
         if (!svdPath) {
             return;

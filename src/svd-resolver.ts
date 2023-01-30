@@ -16,8 +16,17 @@ export class SvdResolver {
     public constructor(protected registry: SvdRegistry) {
     }
 
-    public async resolve(svdPath: string | undefined, device: string | undefined, wsFolderPath?: vscode.Uri): Promise<string | undefined> {
-        if (!svdPath && !device) {
+    public async resolve(session: vscode.DebugSession, wsFolderPath?: vscode.Uri): Promise<string | undefined> {
+        const svdConfig = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<string>(manifest.CONFIG_SVD_PATH) || manifest.DEFAULT_SVD_PATH;
+        let svdPath = session.configuration[svdConfig];
+
+        const deviceConfig = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<string>(manifest.CONFIG_DEVICE) || manifest.DEFAULT_DEVICE;
+        const deviceName = session.configuration[deviceConfig];
+
+        const processorConfig = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<string>(manifest.CONFIG_PROCESSOR) || manifest.DEFAULT_PROCESSOR;
+        const processorName = session.configuration[processorConfig];
+
+        if (!svdPath && !deviceName) {
             return undefined;
         }
 
@@ -45,20 +54,20 @@ export class SvdResolver {
                     // Load devices from pack
                     const devices = getDevices(pdsc);
                     const deviceMap = new Map();
-                    for (const dev of devices) {
-                        deviceMap.set(getDeviceName(dev), dev);
+                    for (const device of devices) {
+                        deviceMap.set(getDeviceName(device), device);
                     }
 
                     let packDevice: Device | undefined;
 
-                    if (device && deviceMap.has(device)) {
-                        packDevice = deviceMap.get(device);
-                    } else if (!device && devices.length == 1) {
+                    if (deviceName && deviceMap.has(deviceName)) {
+                        packDevice = deviceMap.get(deviceName);
+                    } else if (!deviceName && devices.length == 1) {
                         packDevice = devices[0];
                     } else {
                         // Ask user which device to use
                         const items = [...deviceMap.keys()];
-                        const selected = await getSelection('Select a device', items, device);
+                        const selected = await getSelection('Select a device', items, deviceName);
                         if (!selected) {
                             return;
                         }
@@ -74,7 +83,7 @@ export class SvdResolver {
                         return;
                     }
 
-                    const svdFile = getSvdPath(packDevice);
+                    const svdFile = getSvdPath(packDevice, processorName);
                     if (!svdFile) {
                         throw new Error(`Unable to load device ${getDeviceName(packDevice)}`);
                     }
@@ -87,10 +96,10 @@ export class SvdResolver {
                         svdPath = normalize(join(wsFolderPath.fsPath, svdPath));
                     }
                 }
-            } else if (device) {
-                svdPath = this.registry.getSVDFile(device);
+            } else if (deviceName) {
+                svdPath = this.registry.getSVDFile(deviceName);
                 if (!svdPath) {
-                    svdPath = await this.registry.getSVDFileFromCortexDebug(device);
+                    svdPath = await this.registry.getSVDFileFromCortexDebug(deviceName);
                 }
             }
         } catch(e) {

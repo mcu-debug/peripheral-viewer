@@ -232,7 +232,12 @@
         "svd-viewer.deviceConfig": {
           "type": "string",
           "default": "deviceName",
-          "description": "Debug configuration key to use to get the device"
+          "description": "Debug configuration key to use to get the device name"
+        },
+        "svd-viewer.processorConfig": {
+          "type": "string",
+          "default": "processorName",
+          "description": "Debug configuration key to use to get the procerssor name"
         },
         "svd-viewer.svdAddrGapThreshold": {
           "type": "number",
