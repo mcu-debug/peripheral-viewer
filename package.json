@@ -2,7 +2,7 @@
   "name": "svd-viewer",
   "displayName": "SVD Viewer",
   "description": "Standalone SVD Viewer extension extracted from cortex-debug",
-  "version": "1.0.5",
+  "version": "1.1.0",
   "preview": true,
   "publisher": "cortex-debug",
   "author": "Rob Moran <github@thegecko.org>",
@@ -237,7 +237,12 @@
         "svd-viewer.processorConfig": {
           "type": "string",
           "default": "processorName",
-          "description": "Debug configuration key to use to get the procerssor name"
+          "description": "Debug configuration key to use to get the processor name"
+        },
+        "svd-viewer.packAssetUrl": {
+          "type": "string",
+          "default": "https://pack-asset-service.keil.arm.com",
+          "description": "Base URL for CMSIS pack assets"
         },
         "svd-viewer.svdAddrGapThreshold": {
           "type": "number",
@@ -246,11 +251,6 @@
           "minimum": -1,
           "maximum": 32,
           "description": "If the gap between registers is less than this threshold (multiple of 8), combine into a single read from device. -1 means never combine registers and is very slow"
-        },
-        "svd-viewer.packAssetUrl": {
-          "type": "string",
-          "default": "https://pack-asset-service.keil.arm.com",
-          "description": "Base URL for CMSIS pack assets"
         }
       }
     }
