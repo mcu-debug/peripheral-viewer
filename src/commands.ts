@@ -33,7 +33,9 @@ export class Commands {
             vscode.commands.registerCommand(`${manifest.PACKAGE_NAME}.svd.setFormat`, node => this.peripheralsSetFormat(node)),
             vscode.commands.registerCommand(`${manifest.PACKAGE_NAME}.svd.forceRefresh`, node => this.peripheralsForceRefresh(node)),
             vscode.commands.registerCommand(`${manifest.PACKAGE_NAME}.svd.pin`, node => this.peripheralsTogglePin(node)),
-            vscode.commands.registerCommand(`${manifest.PACKAGE_NAME}.svd.unpin`, node => this.peripheralsTogglePin(node))
+            vscode.commands.registerCommand(`${manifest.PACKAGE_NAME}.svd.unpin`, node => this.peripheralsTogglePin(node)),
+            vscode.commands.registerCommand(`${manifest.PACKAGE_NAME}.svd.refreshAll`, () => this.peripheralsForceRefresh()),
+            vscode.commands.registerCommand(`${manifest.PACKAGE_NAME}.svd.collapseAll`, () => this.peripheralsCollapseAll())
         );
     }
 
@@ -70,15 +72,19 @@ export class Commands {
         this.peripheralProvider.refresh();
     }
 
-    private async peripheralsForceRefresh(node: PeripheralBaseNode): Promise<void> {
+    private async peripheralsForceRefresh(node?: PeripheralBaseNode): Promise<void> {
         if (node) {
             const p = node.getPeripheral();
             if (p) {
                 await p.updateData();
             }
+        } else {
+            this.peripheralProvider.updateData();
         }
+    }
 
-        this.peripheralProvider.refresh();
+    private peripheralsCollapseAll(): void {
+        this.peripheralProvider.collapseAll();
     }
 
     private peripheralsTogglePin(node: PeripheralBaseNode): void {

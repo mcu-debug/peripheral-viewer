@@ -280,6 +280,19 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
         this._onDidChangeTreeData.fire(undefined);
     }
 
+    public async updateData(): Promise<void> {
+        const trees = this.sessionPeripheralsMap.values();
+        for (const tree of trees) {
+            await tree.updateData();
+        }
+
+        this.refresh();
+    }
+
+    public collapseAll(): void {
+        vscode.commands.executeCommand(`workbench.actions.treeView.${manifest.PACKAGE_NAME}.svd.collapseAll`);
+    }
+
     public getTreeItem(element: PeripheralBaseNode): vscode.TreeItem | Promise<vscode.TreeItem> {
         return element?.getTreeItem();
     }
