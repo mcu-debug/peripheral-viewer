@@ -43,7 +43,7 @@ export class Commands {
         try {
             const result = await node.performUpdate();
             if (result) {
-                this.peripheralsForceRefresh(node);
+                this.peripheralsForceRefresh();
             }
         } catch (error) {
             vscode.window.showErrorMessage(`Unable to update value: ${(error as Error).message}`);
