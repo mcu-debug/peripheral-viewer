@@ -48,14 +48,11 @@ export class SvdRegistry {
 
     public async getSVDFileFromCortexDebug(device: string): Promise<string | undefined> {
         // Try loading from device support pack registered with this extension
-        const cortexDebug = vscode.extensions.getExtension(CORTEX_EXTENSION);
+        const cortexDebug = vscode.extensions.getExtension<SvdRegistry>(CORTEX_EXTENSION);
         if (cortexDebug) {
             const cdbg = await cortexDebug.activate();
             if (cdbg) {
-                const entry = cdbg.getSVDFile(device);
-                if (entry) {
-                    return entry.path;
-                }
+                return cdbg.getSVDFile(device);
             }
         }
 
