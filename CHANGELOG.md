@@ -1,5 +1,16 @@
 # Change Log
 
+
+## [v1.2.1] - 2023-XX-XX
+
+### New Features
+
+- Add support for using the [debug tracker extension](https://github.com/mcu-debug/debug-tracker-vscode) if installed by the user ([Rob Moran](https://github.com/thegecko))
+
+### Changes
+
+- Transferred publisher and source to [mcu-debug/svd-viewer](https://github.com/mcu-debug/svd-viewer) ([Haneef Mohammed](https://github.com/haneefdm))
+
 ## [v1.1.1] - 2023-01-30
 
 ### New Features
