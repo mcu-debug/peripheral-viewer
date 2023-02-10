@@ -259,7 +259,11 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
     }
 
     public async activate(context: vscode.ExtensionContext): Promise<void> {
-        const view = vscode.window.createTreeView(`${manifest.PACKAGE_NAME}.svd`, { treeDataProvider: this });
+        const opts: vscode.TreeViewOptions<PeripheralBaseNode> = {
+            treeDataProvider: this,
+            showCollapseAll: true
+        };
+        const view = vscode.window.createTreeView(`${manifest.PACKAGE_NAME}.svd`, opts);
         context.subscriptions.push(
             view,
             view.onDidExpandElement((e) => {
@@ -287,10 +291,6 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
         }
 
         this.refresh();
-    }
-
-    public collapseAll(): void {
-        vscode.commands.executeCommand(`workbench.actions.treeView.${manifest.PACKAGE_NAME}.svd.collapseAll`);
     }
 
     public getTreeItem(element: PeripheralBaseNode): vscode.TreeItem | Promise<vscode.TreeItem> {

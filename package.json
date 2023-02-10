@@ -98,11 +98,6 @@
         "command": "svd-viewer.svd.refreshAll",
         "title": "Refresh All",
         "icon": "$(refresh)"
-      },
-      {
-        "command": "svd-viewer.svd.collapseAll",
-        "title": "Collapse All",
-        "icon": "$(collapse-all)"
       }
     ],
     "menus": {
@@ -133,10 +128,6 @@
         },
         {
           "command": "svd-viewer.svd.refreshAll",
-          "when": "false"
-        },
-        {
-          "command": "svd-viewer.svd.collapseAll",
           "when": "false"
         }
       ],
@@ -170,11 +161,6 @@
         {
           "command": "svd-viewer.svd.refreshAll",
           "when": "view == svd-viewer.svd && debugState == stopped",
-          "group": "navigation"
-        },
-        {
-          "command": "svd-viewer.svd.collapseAll",
-          "when": "view == svd-viewer.svd",
           "group": "navigation"
         }
       ],

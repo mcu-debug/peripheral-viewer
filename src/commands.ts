@@ -35,7 +35,6 @@ export class Commands {
             vscode.commands.registerCommand(`${manifest.PACKAGE_NAME}.svd.pin`, node => this.peripheralsTogglePin(node)),
             vscode.commands.registerCommand(`${manifest.PACKAGE_NAME}.svd.unpin`, node => this.peripheralsTogglePin(node)),
             vscode.commands.registerCommand(`${manifest.PACKAGE_NAME}.svd.refreshAll`, () => this.peripheralsForceRefresh()),
-            vscode.commands.registerCommand(`${manifest.PACKAGE_NAME}.svd.collapseAll`, () => this.peripheralsCollapseAll())
         );
     }
 
@@ -81,10 +80,6 @@ export class Commands {
         } else {
             this.peripheralProvider.updateData();
         }
-    }
-
-    private peripheralsCollapseAll(): void {
-        this.peripheralProvider.collapseAll();
     }
 
     private peripheralsTogglePin(node: PeripheralBaseNode): void {
