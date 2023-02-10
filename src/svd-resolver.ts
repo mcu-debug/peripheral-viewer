@@ -17,7 +17,10 @@ export class SvdResolver {
     }
 
     public async resolve(session: vscode.DebugSession, wsFolderPath?: vscode.Uri): Promise<string | undefined> {
-        const svdConfig = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<string>(manifest.CONFIG_SVD_PATH) || manifest.DEFAULT_SVD_PATH;
+        let svdConfig = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<string>(manifest.CONFIG_SVD_PATH);
+        if (!svdConfig || (svdConfig === 'default')) {
+            svdConfig = session.type === 'cortex-debug' ? manifest.CORTEX_DEBUG_PROP : manifest.OTHER_DEBUG_PROP;
+        }
         let svdPath = session.configuration[svdConfig];
 
         const deviceConfig = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<string>(manifest.CONFIG_DEVICE) || manifest.DEFAULT_DEVICE;
