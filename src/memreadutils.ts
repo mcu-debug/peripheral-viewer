@@ -21,7 +21,7 @@ import type { DebugProtocol } from 'vscode-debugprotocol';
 import { AddrRange, AddressRangesUtils } from './addrranges';
 
 /** Has utility functions to read memory in chunks into a storage space */
-export class MemReadUtils {
+export class MemUtils {
     /**
      * Make one or more memory reads and update values. For the caller, it should look like a single
      * memory read but, if one read fails, all reads are considered as failed.
@@ -81,20 +81,20 @@ export class MemReadUtils {
     public static readMemory(session: vscode.DebugSession, startAddr: number, length: number, storeTo: number[]): Promise<boolean> {
         const maxChunk = (4 * 1024);
         const ranges = AddressRangesUtils.splitIntoChunks([new AddrRange(startAddr, length)], maxChunk);
-        return MemReadUtils.readMemoryChunks(session, startAddr, ranges, storeTo);
+        return MemUtils.readMemoryChunks(session, startAddr, ranges, storeTo);
     }
 
     public static async writeMemory(session: vscode.DebugSession, startAddr: number, value: number, length: number): Promise<boolean> {
         const memoryReference = '0x' + startAddr.toString(16);
-        const bytes: string[] = [];
         const numbytes = length / 8;
+        const bytes = new Uint8Array(numbytes);
 
+        // Assumes little endian?
+        value = value >>> 0;
         for (let i = 0; i < numbytes; i++) {
             const byte = value & 0xFF;
+            bytes[i] = byte;
             value = value >>> 8;
-            let bs = byte.toString(16);
-            if (bs.length === 1) { bs = '0' + bs; }
-            bytes[i] = bs;
         }
 
         const data = Buffer.from(bytes).toString('base64');
@@ -103,7 +103,13 @@ export class MemReadUtils {
             data
         };
 
-        await session.customRequest('writeMemory', request);
+        try {
+            await session.customRequest('writeMemory', request);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } catch (e: any) {
+            vscode.window.showErrorMessage(`Failed to write @ ${memoryReference}: ${e.toString()}`);
+            return false;
+        }
         return true;
     }
 }

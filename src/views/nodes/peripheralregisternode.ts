@@ -25,7 +25,7 @@ import { extractBits, createMask, hexFormat, binaryFormat } from '../../utils';
 import { NumberFormat, NodeSetting } from '../../common';
 import { AccessType } from '../../svd-parser';
 import { AddrRange } from '../../addrranges';
-import { MemReadUtils } from '../../memreadutils';
+import { MemUtils } from '../../memreadutils';
 
 export interface PeripheralRegisterOptions {
     name: string;
@@ -259,9 +259,11 @@ export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
             return false;
         }
 
-        await MemReadUtils.writeMemory(vscode.debug.activeDebugSession, this.parent.getAddress(this.offset), value, this.size);
-        await this.parent.updateData();
-        return true;
+        const success = await MemUtils.writeMemory(vscode.debug.activeDebugSession, this.parent.getAddress(this.offset), value, this.size);
+        if (success) {
+            await this.parent.updateData();
+        }
+        return success;
     }
 
     public updateData(): Thenable<boolean> {

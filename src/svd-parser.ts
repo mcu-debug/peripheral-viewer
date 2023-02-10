@@ -84,10 +84,10 @@ export class SVDParser {
         };
 
         if (svdData.device.resetValue) {
-            defaultOptions.resetValue = parseInteger(svdData.device.resetValue[0]) || 0;
+            defaultOptions.resetValue = parseInteger(svdData.device.resetValue[0]) ?? 0;
         }
         if (svdData.device.size) {
-            defaultOptions.size = parseInteger(svdData.device.size[0]) || 0;
+            defaultOptions.size = parseInteger(svdData.device.size[0]) ?? 0;
         }
         if (svdData.device.access) {
             defaultOptions.accessType = accessTypeFromString(svdData.device.access[0]);
@@ -98,7 +98,6 @@ export class SVDParser {
             peripheralMap[name] = element;
         });
 
-        // tslint:disable-next-line:forin
         for (const key in peripheralMap) {
             const element = peripheralMap[key];
             if (element.$ && element.$.derivedFrom) {
@@ -108,7 +107,6 @@ export class SVDParser {
         }
 
         const peripherials = [];
-        // tslint:disable-next-line:forin
         for (const key in peripheralMap) {
             peripherials.push(SVDParser.parsePeripheral(session, peripheralMap[key], defaultOptions));
         }
@@ -123,7 +121,7 @@ export class SVDParser {
     }
 
     private static cleanupDescription(input: string): string {
-        return input.replace('\r', '').replace(/\n\s*/g, ' ');
+        return input.replace(/\r/g, '').replace(/\n\s*/g, ' ');
     }
 
     private static parseFields(fieldInfo: any[], parent: PeripheralRegisterNode): PeripheralFieldNode[] {
@@ -139,27 +137,21 @@ export class SVDParser {
             const description = this.cleanupDescription(f.description ? f.description[0] : '');
 
             if (f.bitOffset && f.bitWidth) {
-                offset = parseInteger(f.bitOffset[0]);
-                width = parseInteger(f.bitWidth[0]);
+                offset = parseInteger(f.bitOffset[0]) ?? 0;
+                width = parseInteger(f.bitWidth[0]) ?? 0;
             } else if (f.bitRange) {
                 let range = f.bitRange[0];
                 range = range.substring(1, range.length - 1);
                 range = range.split(':');
-                const end = parseInteger(range[0]);
-                const start = parseInteger(range[1]);
-
-                if (end && start) {
-                    width = end - start + 1;
-                    offset = start;
-                }
+                const end = parseInteger(range[0]) ?? 0;
+                const start = parseInteger(range[1]) ?? 0;
+                width = end - start + 1;
+                offset = start;
             } else if (f.msb && f.lsb) {
-                const msb = parseInteger(f.msb[0]);
-                const lsb = parseInteger(f.lsb[0]);
-
-                if (msb && lsb) {
-                    width = msb - lsb + 1;
-                    offset = lsb;
-                }
+                const msb = parseInteger(f.msb[0]) ?? 0;
+                const lsb = parseInteger(f.lsb[0]) ?? 0;
+                width = msb - lsb + 1;
+                offset = lsb;
             } else {
                 // tslint:disable-next-line:max-line-length
                 throw new Error(`Unable to parse SVD file: field ${f.name[0]} must have either bitOffset and bitWidth elements, bitRange Element, or msb and lsb elements.`);
@@ -181,19 +173,17 @@ export class SVDParser {
                             if (ev.value && ev.value.length > 0) {
                                 const evname = ev.name[0];
                                 const evdesc = this.cleanupDescription(ev.description ? ev.description[0] : '');
-                                const val = ev.value[0].toLowerCase();
-                                const evvalue = parseInteger(val);
+                                const evvalue = parseInteger(ev.value[0]) ?? 0;
 
-                                if (valueMap && evvalue) {
-                                    valueMap[evvalue] = new EnumeratedValue(evname, evdesc, evvalue);
-                                }
+                                valueMap = valueMap ?? {};      // lint thinks this can be undefined
+                                valueMap[evvalue] = new EnumeratedValue(evname, evdesc, evvalue);
                             }
                         });
                     }
 
                     // According to the SVD spec/schema, I am not sure any scope applies. Seems like everything is in a global name space
                     // No make sense but how I am interpreting it for now. Easy to make it scope based but then why allow referencing
-                    // other peripherals. Global scope it is. Overrides dups from previous definitions!!!
+                    // other peripherals. Global scope it is. Overrides duplicates from previous definitions!!!
                     if (eValues.name && eValues.name[0]) {
                         let evName = eValues.name[0];
                         for (const prefix of [null, f.name[0], parent.name, parent.parent.name]) {
@@ -217,11 +207,13 @@ export class SVDParser {
             }
 
             if (f.dim) {
-                if (!f.dimIncrement) { throw new Error(`Unable to parse SVD file: field ${f.name[0]} has dim element, with no dimIncrement element.`); }
+                const increment = f.dimIncrement[0] ? parseInteger(f.dimIncrement[0]) ?? 0 : 0;
+                if (!increment) {
+                    throw new Error(`Unable to parse SVD file: field ${f.name[0]} has dim element, with no/invalid dimIncrement element.`);
+                }
 
                 const count = parseInteger(f.dim[0]);
                 if (count) {
-                    const increment = parseInteger(f.dimIncrement[0]);
                     let index = [];
                     if (f.dimIndex) {
                         index = parseDimIndex(f.dimIndex[0], count);
@@ -230,13 +222,10 @@ export class SVDParser {
                     }
 
                     const namebase: string = f.name[0];
-                    const offsetbase = offset;
 
-                    if (offsetbase && increment) {
-                        for (let i = 0; i < count; i++) {
-                            const name = namebase.replace('%s', index[i]);
-                            fields.push(new PeripheralFieldNode(parent, { ...baseOptions, name: name, offset: offsetbase + (increment * i) }));
-                        }
+                    for (let i = 0; i < count; i++) {
+                        const name = namebase.replace('%s', index[i]);
+                        fields.push(new PeripheralFieldNode(parent, { ...baseOptions, name: name, offset: offset + (increment * i) }));
                     }
                 }
             } else {
@@ -258,7 +247,7 @@ export class SVDParser {
             SVDParser.peripheralRegisterMap[parent.name + '.' + nm] = r;
         }
 
-        // It is wierd to iterate this way but it can handle forward references, are they legal? not sure
+        // It is weird to iterate this way but it can handle forward references, are they legal? not sure
         // Or we could have done this work in the loop above. Not the best way, but it is more resilient to
         // concatenate elements and re-parse. We are patching at XML level rather than object level
         let ix = 0;
@@ -270,7 +259,7 @@ export class SVDParser {
                 if (!from) {
                     throw new Error(`SVD error: Invalid 'derivedFrom' "${derivedFrom}" for register "${nm}"`);
                 }
-                // We are supposed to preserve all but the addressOffseet, but the following should work
+                // We are supposed to preserve all but the addressOffset, but the following should work
                 const combined = { ...from, ...r };
                 delete combined.$.derivedFrom;          // No need to keep this anymore
                 combined.$._derivedFrom = derivedFrom;  // Save a backup for debugging
@@ -287,47 +276,52 @@ export class SVDParser {
                 baseOptions.accessType = accessTypeFromString(r.access[0]);
             }
             if (r.size) {
-                baseOptions.size = parseInteger(r.size[0]);
+                baseOptions.size = parseInteger(r.size[0]) ?? 0;
             }
             if (r.resetValue) {
-                baseOptions.resetValue = parseInteger(r.resetValue[0]);
+                baseOptions.resetValue = parseInteger(r.resetValue[0]) ?? 0;
             }
 
             if (r.dim) {
-                if (!r.dimIncrement) { throw new Error(`Unable to parse SVD file: register ${r.name[0]} has dim element, with no dimIncrement element.`); }
-
+                const increment = r.dimIncrement[0] ? parseInteger(r.dimIncrement[0]) ?? 0 : 0;
+                if (!increment) {
+                    throw new Error(`Unable to parse SVD file: register ${r.name[0]} has dim element, with no/invalid dimIncrement element.`);
+                }
                 const count = parseInteger(r.dim[0]);
-                const increment = parseInteger(r.dimIncrement[0]);
+                if (!count || (count < 1)) {
+                    throw new Error(`Unable to parse SVD file: register ${r.name[0]} has dim element, with no dimensions.`);
+                }
+                const offsetbase = parseInteger(r.addressOffset[0]);
+                if (!offsetbase || (offsetbase < 0)) {
+                    throw new Error(
+                        `Unable to parse SVD file: register ${r.name[0]} has invalid addressOffset ` +
+                        r.addressOffset[0] || 'undefined');
+                }
 
-                if (count && increment) {
-                    let index = [];
-                    if (r.dimIndex) {
-                        index = parseDimIndex(r.dimIndex[0], count);
-                    } else {
-                        for (let i = 0; i < count; i++) { index.push(`${i}`); }
+
+                let index = [];
+                if (r.dimIndex) {
+                    index = parseDimIndex(r.dimIndex[0], count);
+                } else {
+                    for (let i = 0; i < count; i++) { index.push(`${i}`); }
+                }
+
+                const namebase: string = r.name[0];
+                const descbase: string = this.cleanupDescription(r.description ? r.description[0] : '');
+                for (let i = 0; i < count; i++) {
+                    const name = namebase.replace('%s', index[i]);
+                    const description = descbase.replace('%s', index[i]);
+
+                    const register = new PeripheralRegisterNode(parent, {
+                        ...baseOptions,
+                        name: name,
+                        description: description,
+                        addressOffset: offsetbase + (increment * i)
+                    });
+                    if (r.fields && r.fields.length === 1) {
+                        SVDParser.parseFields(r.fields[0].field, register);
                     }
-
-                    const namebase: string = r.name[0];
-                    const descbase: string = this.cleanupDescription(r.description ? r.description[0] : '');
-                    const offsetbase = parseInteger(r.addressOffset[0]);
-
-                    if (offsetbase) {
-                        for (let i = 0; i < count; i++) {
-                            const name = namebase.replace('%s', index[i]);
-                            const description = descbase.replace('%s', index[i]);
-
-                            const register = new PeripheralRegisterNode(parent, {
-                                ...baseOptions,
-                                name: name,
-                                description: description,
-                                addressOffset: offsetbase + (increment * i)
-                            });
-                            if (r.fields && r.fields.length === 1) {
-                                SVDParser.parseFields(r.fields[0].field, register);
-                            }
-                            registers.push(register);
-                        }
-                    }
+                    registers.push(register);
                 }
             } else {
                 const description = this.cleanupDescription(r.description ? r.description[0] : '');
@@ -368,19 +362,20 @@ export class SVDParser {
                 baseOptions.accessType = accessTypeFromString(c.access[0]);
             }
             if (c.size) {
-                baseOptions.size = parseInteger(c.size[0]);
+                baseOptions.size = parseInteger(c.size[0]) ?? 0;
             }
             if (c.resetValue) {
-                baseOptions.resetValue = parseInteger(c.resetValue);
+                baseOptions.resetValue = parseInteger(c.resetValue) ?? 0;
             }
 
             if (c.dim) {
-                if (!c.dimIncrement) { throw new Error(`Unable to parse SVD file: cluster ${c.name[0]} has dim element, with no dimIncrement element.`); }
+                const increment = c.dimIncrement[0] ? parseInteger(c.dimIncrement[0]) ?? 0 : 0;
+                if (!increment) {
+                    throw new Error(`Unable to parse SVD file: cluster ${c.name[0]} has dim element, with no/invalid dimIncrement.`);
+                }
 
                 const count = parseInteger(c.dim[0]);
-                const increment = parseInteger(c.dimIncrement[0]);
-
-                if (count && increment) {
+                if (count) {
                     let index = [];
                     if (c.dimIndex) {
                         index = parseDimIndex(c.dimIndex[0], count);
@@ -391,25 +386,25 @@ export class SVDParser {
                     const namebase: string = c.name[0];
                     const descbase: string = this.cleanupDescription(c.description ? c.description[0] : '');
                     const offsetbase = parseInteger(c.addressOffset[0]);
-
-                    if (offsetbase) {
-                        for (let i = 0; i < count; i++) {
-                            const name = namebase.replace('%s', index[i]);
-                            const description = descbase.replace('%s', index[i]);
-                            const cluster = new PeripheralClusterNode(parent, {
-                                ...baseOptions,
-                                name: name,
-                                description: description,
-                                addressOffset: offsetbase + (increment * i)
-                            });
-                            if (c.register) {
-                                SVDParser.parseRegisters(c.register, cluster);
-                            }
-                            if (c.cluster) {
-                                SVDParser.parseClusters(c.cluster, cluster);
-                            }
-                            clusters.push(cluster);
+                    if ((offsetbase === undefined) || (offsetbase < 0)) {
+                        throw new Error(`Unable to parse SVD file: cluster ${c.name[0]} has an no/invalid addressOffset`);
+                    }
+                    for (let i = 0; i < count; i++) {
+                        const name = namebase.replace('%s', index[i]);
+                        const description = descbase.replace('%s', index[i]);
+                        const cluster = new PeripheralClusterNode(parent, {
+                            ...baseOptions,
+                            name: name,
+                            description: description,
+                            addressOffset: offsetbase + (increment * i)
+                        });
+                        if (c.register) {
+                            SVDParser.parseRegisters(c.register, cluster);
                         }
+                        if (c.cluster) {
+                            SVDParser.parseClusters(c.cluster, cluster);
+                        }
+                        clusters.push(cluster);
                     }
                 }
             } else {
@@ -418,7 +413,7 @@ export class SVDParser {
                     ...baseOptions,
                     name: c.name[0],
                     description: description,
-                    addressOffset: parseInteger(c.addressOffset[0])
+                    addressOffset: parseInteger(c.addressOffset[0]) ?? 0
                 });
                 if (c.register) {
                     SVDParser.parseRegisters(c.register, cluster);
@@ -448,7 +443,7 @@ export class SVDParser {
 
         const options: any = {
             name: p.name[0],
-            baseAddress: parseInteger(p.baseAddress ? p.baseAddress[0] : 0),
+            baseAddress: parseInteger(p.baseAddress ? p.baseAddress[0] : '0'),
             description: this.cleanupDescription(p.description ? p.description[0] : ''),
             totalLength: totalLength
         };

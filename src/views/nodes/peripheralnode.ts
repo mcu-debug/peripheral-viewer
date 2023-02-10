@@ -22,7 +22,7 @@ import { PeripheralRegisterNode } from './peripheralregisternode';
 import { PeripheralClusterNode, PeripheralRegisterOrClusterNode } from './peripheralclusternode';
 import { AddrRange, AddressRangesUtils } from '../../addrranges';
 import { NumberFormat, NodeSetting } from '../../common';
-import { MemReadUtils } from '../../memreadutils';
+import { MemUtils } from '../../memreadutils';
 import { AccessType } from '../../svd-parser';
 import { hexFormat } from '../../utils';
 
@@ -153,7 +153,7 @@ export class PeripheralNode extends PeripheralBaseNode {
             this.currentValue = new Array<number>(this.totalLength);
         }
 
-        return MemReadUtils.readMemoryChunks(this.session, this.baseAddress, this.addrRanges, this.currentValue);
+        return MemUtils.readMemoryChunks(this.session, this.baseAddress, this.addrRanges, this.currentValue);
     }
 
     public collectRanges(): void {

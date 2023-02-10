@@ -105,6 +105,7 @@ export class PeripheralTreeForSession extends PeripheralBaseNode {
     private async createPeripherals(svdPath: string, gapThreshold: number): Promise<void> {
         let svdData: SvdData | undefined;
 
+        this.errMessage = `Loading ${svdPath} ...`;
         try {
             let contents: ArrayBuffer | undefined;
 
@@ -121,6 +122,7 @@ export class PeripheralTreeForSession extends PeripheralBaseNode {
                 svdData = await parseStringPromise(xml);
             }
         } catch(e) {
+            this.errMessage = `${svdPath}: Error: ${e ? e.toString() : 'Unknown error'}`;
             // eslint-disable-next-line no-console
             console.warn(e);
         }
@@ -128,8 +130,6 @@ export class PeripheralTreeForSession extends PeripheralBaseNode {
         if (!svdData) {
             return;
         }
-
-        this.errMessage = `Loading ${svdPath}`;
 
         try {
             this.peripherials = await SVDParser.parseSVD(this.session, svdData, gapThreshold);

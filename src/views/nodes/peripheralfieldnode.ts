@@ -218,7 +218,7 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
             if (this.enumeration[value]) {
                 formatted = `${this.enumeration[value].name} (${formatted})`;
             } else {
-                formatted = `Unkown Enumeration Value (${formatted})`;
+                formatted = `Unknown Enumeration (${formatted})`;
             }
         }
 
@@ -242,10 +242,20 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
     public performUpdate(): Thenable<boolean> {
         return new Promise((resolve, reject) => {
             if (this.enumeration) {
-                vscode.window.showQuickPick(this.enumerationValues).then((val) => {
+                const items: vscode.QuickPickItem[] = [];
+                for (const eStr of this.enumerationValues) {
+                    const numval = this.enumerationMap[eStr];
+                    const e = this.enumeration[numval];
+                    const item: vscode.QuickPickItem = {
+                        label: eStr,
+                        detail: e.description
+                    };
+                    items.push(item);
+                }
+                vscode.window.showQuickPick(items).then((val) => {
                     if (val === undefined) { return reject('Input not selected'); }
 
-                    const numval = this.enumerationMap[val];
+                    const numval = this.enumerationMap[val.label];
                     this.parent.updateBits(this.offset, this.width, numval).then(resolve, reject);
                 });
             } else {

@@ -55,6 +55,7 @@ export function extractBits(value: number, offset: number, width: number): numbe
 }
 
 export function parseInteger(value: string): number | undefined {
+    value = value.toLowerCase();
     if ((/^0b([01]+)$/i).test(value)) {
         return parseInt(value.substring(2), 2);
     } else if ((/^0x([0-9a-f]+)$/i).test(value)) {

@@ -8,6 +8,7 @@ const DEBUG_TRACKER_EXTENSION = 'mcu-debug.debug-tracker-vscode';
 
 interface IDebuggerTrackerEvent {
     event: DebugSessionStatus;
+    sessionId: string;
     session?: vscode.DebugSession;
 }
 
@@ -47,6 +48,8 @@ export class DebugTracker {
     private _onDidStopDebug: vscode.EventEmitter<vscode.DebugSession> = new vscode.EventEmitter<vscode.DebugSession>();
     public readonly onDidStopDebug: vscode.Event<vscode.DebugSession> = this._onDidStopDebug.event;
 
+    private sessionIdMap: {[id: string]: vscode.DebugSession} = {};
+
     public async activate(context: vscode.ExtensionContext): Promise<void> {
         const debugtracker = await this.getTracker();
         if (debugtracker) {
@@ -55,15 +58,20 @@ export class DebugTracker {
                 version: 1,
                 body: {
                     debuggers: '*',
-                    handler: async event => {
+                    handler: async (event: IDebuggerTrackerEvent) => {
+                        const session = this.sessionIdMap[event.sessionId];
                         if (event.event === DebugSessionStatus.Initializing && event.session) {
+                            // Session is passed in only when session is initializing, so we have to cache it
+                            this.sessionIdMap[event.sessionId] = event.session;
                             this._onWillStartSession.fire(event.session);
-                        }
-                        if (event.event === DebugSessionStatus.Terminated && event.session) {
-                            this._onWillStopSession.fire(event.session);
-                        }
-                        if (event.event === DebugSessionStatus.Stopped && event.session) {
-                            this._onDidStopDebug.fire(event.session);
+                        } else if (session) {
+                            if (event.event === DebugSessionStatus.Terminated) {
+                                this._onWillStopSession.fire(session);
+                                delete this.sessionIdMap[event.sessionId];
+                            }
+                            if (event.event === DebugSessionStatus.Stopped) {
+                                this._onDidStopDebug.fire(session);
+                            }
                         }
                     }
                 }
