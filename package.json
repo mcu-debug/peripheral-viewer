@@ -192,6 +192,11 @@
         },
         {
           "command": "svd-viewer.svd.copyValue",
+          "when": "view == svd-viewer.svd && viewItem == fieldRO",
+          "group": "inline"
+        },
+        {
+          "command": "svd-viewer.svd.copyValue",
           "when": "view == svd-viewer.svd && viewItem == registerRW",
           "group": "inline"
         },

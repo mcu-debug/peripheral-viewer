@@ -94,7 +94,14 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
     public getTreeItem(): vscode.TreeItem | Promise<vscode.TreeItem> {
         const isReserved = this.name.toLowerCase() === 'reserved';
 
-        const context = isReserved ? 'field-res' : (this.parent.accessType === AccessType.ReadOnly ? 'field-ro' : 'field');
+        let context = 'field';
+        if (isReserved) {
+            context = 'field-res';
+        } else if (this.parent.accessType === AccessType.ReadOnly) {
+            context = 'fieldRO';
+        } else if (this.parent.accessType === AccessType.WriteOnly) {
+            context = 'fieldWO';
+        }
 
         const rangestart = this.offset;
         const rangeend = this.offset + this.width - 1;
