@@ -292,7 +292,7 @@ export class SVDParser {
                     throw new Error(`Unable to parse SVD file: register ${r.name[0]} has dim element, with no dimensions.`);
                 }
                 const offsetbase = parseInteger(r.addressOffset[0]);
-                if (!offsetbase || (offsetbase < 0)) {
+                if ((offsetbase === undefined) || (offsetbase < 0)) {
                     throw new Error(
                         `Unable to parse SVD file: register ${r.name[0]} has invalid addressOffset ` +
                         r.addressOffset[0] || 'undefined');
