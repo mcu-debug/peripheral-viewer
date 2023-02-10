@@ -253,7 +253,9 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
                     items.push(item);
                 }
                 vscode.window.showQuickPick(items).then((val) => {
-                    if (val === undefined) { return reject('Input not selected'); }
+                    if (val === undefined) {
+                        return false;
+                    }
 
                     const numval = this.enumerationMap[val.label];
                     this.parent.updateBits(this.offset, this.width, numval).then(resolve, reject);
@@ -263,7 +265,7 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
                     if (typeof val === 'string') {
                         const numval = parseInteger(val);
                         if (numval === undefined) {
-                            return reject('Unable to parse input value.');
+                            return false;
                         }
                         this.parent.updateBits(this.offset, this.width, numval).then(resolve, reject);
                     }
