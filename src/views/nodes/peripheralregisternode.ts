@@ -20,7 +20,7 @@ import * as vscode from 'vscode';
 import { PeripheralNode } from './peripheralnode';
 import { PeripheralClusterNode } from './peripheralclusternode';
 import { ClusterOrRegisterBaseNode, PeripheralBaseNode } from './basenode';
-import { PeripheralFieldNode } from './peripheralfieldnode';
+import { EnumerationMap, PeripheralFieldNode } from './peripheralfieldnode';
 import { extractBits, createMask, hexFormat, binaryFormat } from '../../utils';
 import { NumberFormat, NodeSetting } from '../../common';
 import { AccessType } from '../../svd-parser';
@@ -321,5 +321,11 @@ export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
     public collectRanges(addrs: AddrRange[]): void {
         const finalOffset = this.parent.getOffset(this.offset);
         addrs.push(new AddrRange(finalOffset, this.size / 8));
+    }
+
+    public resolveDeferedEnums(enumTypeValuesMap: { [key: string]: EnumerationMap; }) {
+        for (const child of this.children) {
+            child.resolveDeferedEnums(enumTypeValuesMap);
+        }
     }
 }

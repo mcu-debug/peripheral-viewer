@@ -132,7 +132,8 @@ export class PeripheralTreeForSession extends PeripheralBaseNode {
         }
 
         try {
-            this.peripherials = await SVDParser.parseSVD(this.session, svdData, gapThreshold);
+            const parser = new SVDParser();
+            this.peripherials = await parser.parseSVD(this.session, svdData, gapThreshold);
             this.loaded = true;
         } catch(e) {
             this.peripherials = [];
@@ -201,7 +202,7 @@ export class PeripheralTreeForSession extends PeripheralBaseNode {
         if (((typeof thresh) === 'number') && (thresh < 0)) {
             thresh = -1;     // Never merge register reads even if adjacent
         } else {
-            // Set the threshold between 0 and 32, with a default of 16 and a mukltiple of 8
+            // Set the threshold between 0 and 32, with a default of 16 and a multiple of 8
             thresh = ((((typeof thresh) === 'number') ? Math.max(0, Math.min(thresh, 32)) : 16) + 7) & ~0x7;
         }
 

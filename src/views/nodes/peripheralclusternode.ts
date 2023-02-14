@@ -24,6 +24,7 @@ import { AccessType } from '../../svd-parser';
 import { NodeSetting, NumberFormat } from '../../common';
 import { AddrRange } from '../../addrranges';
 import { hexFormat } from '../../utils';
+import { EnumerationMap } from './peripheralfieldnode';
 
 export interface ClusterOptions {
     name: string;
@@ -154,5 +155,11 @@ export class PeripheralClusterNode extends ClusterOrRegisterBaseNode {
 
     public performUpdate(): Thenable<boolean> {
         throw new Error('Method not implemented.');
+    }
+
+    public resolveDeferedEnums(enumTypeValuesMap: { [key: string]: EnumerationMap; }) {
+        for (const child of this.children) {
+            child.resolveDeferedEnums(enumTypeValuesMap);
+        }
     }
 }

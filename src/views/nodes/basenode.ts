@@ -19,6 +19,7 @@
 import { Command, TreeItem, DebugSession } from 'vscode';
 import { NumberFormat, NodeSetting } from '../../common';
 import { AddrRange } from '../../addrranges';
+import { EnumerationMap } from './peripheralfieldnode';
 
 export abstract class BaseNode {
     public expanded: boolean;
@@ -47,7 +48,7 @@ export abstract class PeripheralBaseNode extends BaseNode {
     public readonly name: string | undefined;
     public session: DebugSession | undefined;
 
-    constructor(protected readonly parent?: PeripheralBaseNode) {
+    constructor(public readonly parent?: PeripheralBaseNode) {
         super(parent);
         this.format = NumberFormat.Auto;
         this.pinned = false;
@@ -71,4 +72,5 @@ export abstract class PeripheralBaseNode extends BaseNode {
 
 export abstract class ClusterOrRegisterBaseNode extends PeripheralBaseNode {
     public readonly offset: number | undefined;
+    public abstract resolveDeferedEnums(enumTypeValuesMap: { [key: string]: EnumerationMap; }): void;
 }

@@ -38,6 +38,7 @@ export interface FieldOptions {
     offset: number;
     width: number;
     enumeration?: EnumerationMap;
+    derivedFrom?: string;           // Set this if unresolved
     accessType?: AccessType;
 }
 
@@ -54,7 +55,7 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
     private enumerationMap: any;
     private prevValue = '';
 
-    constructor(public parent: PeripheralRegisterNode, options: FieldOptions) {
+    constructor(public parent: PeripheralRegisterNode, private options: FieldOptions) {
         super(parent);
 
         this.name = options.name;
@@ -75,20 +76,23 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
         }
 
         if (options.enumeration) {
-            this.enumeration = options.enumeration;
-            this.enumerationMap = {};
-            this.enumerationValues = [];
-
-            // tslint:disable-next-line:forin
-            for (const key in options.enumeration) {
-                const name = options.enumeration[key].name;
-
-                this.enumerationValues.push(name);
-                this.enumerationMap[name] = key;
-            }
+            this.setEnumeration(options.enumeration);
         }
 
         this.parent.addChild(this);
+    }
+
+    private setEnumeration(enumeration: EnumerationMap) {
+        this.enumeration = enumeration;
+        this.enumerationMap = {};
+        this.enumerationValues = [];
+
+        for (const key in enumeration) {
+            const name = enumeration[key].name;
+
+            this.enumerationValues.push(name);
+            this.enumerationMap[name] = key;
+        }
     }
 
     public getTreeItem(): vscode.TreeItem | Promise<vscode.TreeItem> {
@@ -97,9 +101,9 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
         let context = 'field';
         if (isReserved) {
             context = 'field-res';
-        } else if (this.parent.accessType === AccessType.ReadOnly) {
+        } else if (this.accessType === AccessType.ReadOnly) {
             context = 'fieldRO';
-        } else if (this.parent.accessType === AccessType.WriteOnly) {
+        } else if (this.accessType === AccessType.WriteOnly) {
             context = 'fieldWO';
         }
 
@@ -329,5 +333,17 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
 
     public collectRanges(_a: AddrRange[]): void {
         throw new Error('Method not implemented.');
+    }
+
+    public resolveDeferedEnums(enumTypeValuesMap: { [key: string]: EnumerationMap; }) {
+        if (this.options.derivedFrom) {
+            const map = enumTypeValuesMap[this.options.derivedFrom];
+            if (map) {
+                this.setEnumeration(map);
+                this.options.derivedFrom = undefined;
+            } else {
+                throw new Error(`Invalid derivedFrom=${this.options.derivedFrom} for enumeratedValues of field ${this.name}`);
+            }
+        }
     }
 }

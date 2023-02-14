@@ -25,6 +25,7 @@ import { NumberFormat, NodeSetting } from '../../common';
 import { MemUtils } from '../../memreadutils';
 import { AccessType } from '../../svd-parser';
 import { hexFormat } from '../../utils';
+import { EnumerationMap } from './peripheralfieldnode';
 
 export interface PeripheralOptions {
     name: string;
@@ -243,6 +244,12 @@ export class PeripheralNode extends PeripheralBaseNode {
             }
         } else {
             return p1.pinned ? -1 : 1;
+        }
+    }
+
+    public resolveDeferedEnums(enumTypeValuesMap: { [key: string]: EnumerationMap; }) {
+        for (const child of this.children) {
+            child.resolveDeferedEnums(enumTypeValuesMap);
         }
     }
 }

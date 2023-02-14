@@ -66,15 +66,18 @@ export interface SvdData {
 }
 
 export class SVDParser {
-    private static enumTypeValuesMap: { [key: string]: any } = {};
-    private static peripheralRegisterMap: { [key: string]: any } = {};
-    private static gapThreshold: number;
+    private enumTypeValuesMap: { [key: string]: EnumerationMap } = {};
+    private peripheralRegisterMap: { [key: string]: any } = {};
+    private gapThreshold = 16;
 
-    public static async parseSVD(
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    constructor() {}
+
+    public async parseSVD(
         session: vscode.DebugSession, svdData: SvdData, gapThreshold: number): Promise<PeripheralNode[]> {
-        SVDParser.gapThreshold = gapThreshold;
-        SVDParser.enumTypeValuesMap = {};
-        SVDParser.peripheralRegisterMap = {};
+        this.gapThreshold = gapThreshold;
+        this.enumTypeValuesMap = {};
+        this.peripheralRegisterMap = {};
 
         const peripheralMap: { [key: string]: any } = {};
         const defaultOptions = {
@@ -108,23 +111,24 @@ export class SVDParser {
 
         const peripherials = [];
         for (const key in peripheralMap) {
-            peripherials.push(SVDParser.parsePeripheral(session, peripheralMap[key], defaultOptions));
+            peripherials.push(this.parsePeripheral(session, peripheralMap[key], defaultOptions));
         }
 
         peripherials.sort(PeripheralNode.compare);
 
         for (const p of peripherials) {
+            p.resolveDeferedEnums(this.enumTypeValuesMap); // This can throw an exception
             p.collectRanges();
         }
 
         return peripherials;
     }
 
-    private static cleanupDescription(input: string): string {
+    private cleanupDescription(input: string): string {
         return input.replace(/\r/g, '').replace(/\n\s*/g, ' ');
     }
 
-    private static parseFields(fieldInfo: any[], parent: PeripheralRegisterNode): PeripheralFieldNode[] {
+    private parseFields(fieldInfo: any[], parent: PeripheralRegisterNode): PeripheralFieldNode[] {
         const fields: PeripheralFieldNode[] = [];
 
         if (fieldInfo == null) {
@@ -158,15 +162,18 @@ export class SVDParser {
             }
 
             let valueMap: EnumerationMap | undefined;
+            let derivedFrom: string | undefined;
             if (f.enumeratedValues) {
                 valueMap = {};
                 const eValues = f.enumeratedValues[0];
                 if (eValues.$ && eValues.$.derivedFrom) {
-                    const found = SVDParser.enumTypeValuesMap[eValues.$.derivedFrom];
+                    const found = this.enumTypeValuesMap[eValues.$.derivedFrom];
                     if (!found) {
-                        throw new Error(`Invalid derivedFrom=${eValues.$.derivedFrom} for enumeratedValues of field ${f.name[0]}`);
+                        derivedFrom = eValues.$.derivedFrom as string;
+                        // valueMap = undefined;
+                    } else {
+                        valueMap = found;
                     }
-                    valueMap = found;
                 } else if (eValues) {
                     if (eValues.enumeratedValue) {
                         eValues.enumeratedValue.map((ev: any) => {
@@ -186,10 +193,21 @@ export class SVDParser {
                     // other peripherals. Global scope it is. Overrides duplicates from previous definitions!!!
                     if (eValues.name && eValues.name[0]) {
                         let evName = eValues.name[0];
+                        this.enumTypeValuesMap[evName] = valueMap;
+                        evName = f.name[0] + '.' + evName;
+                        this.enumTypeValuesMap[evName] = valueMap;
+                        let tmp: any = parent;
+                        while (tmp) {
+                            evName = tmp.name + '.' + evName;
+                            this.enumTypeValuesMap[evName] = valueMap;
+                            tmp = tmp.parent;
+                        }
+                        /*
                         for (const prefix of [null, f.name[0], parent.name, parent.parent.name]) {
                             evName = prefix ? prefix + '.' + evName : evName;
-                            SVDParser.enumTypeValuesMap[evName] = valueMap;
+                            this.enumTypeValuesMap[evName] = valueMap;
                         }
+                        */
                     }
                 }
             }
@@ -199,7 +217,8 @@ export class SVDParser {
                 description: description,
                 offset: offset,
                 width: width,
-                enumeration: valueMap
+                enumeration: valueMap,
+                derivedFrom: derivedFrom
             };
 
             if (f.access) {
@@ -207,12 +226,16 @@ export class SVDParser {
             }
 
             if (f.dim) {
+                const count = parseInteger(f.dim[0]);
+                if (!count || (count < 1)) {
+                    throw new Error(`Unable to parse SVD file: field ${f.name[0]} has dim element, with no/invalid dimensions.`);
+                }
                 const increment = f.dimIncrement[0] ? parseInteger(f.dimIncrement[0]) ?? 0 : 0;
-                if (!increment) {
+                if (!increment && (count > 1)) {
                     throw new Error(`Unable to parse SVD file: field ${f.name[0]} has dim element, with no/invalid dimIncrement element.`);
                 }
 
-                const count = parseInteger(f.dim[0]);
+                //const count = parseInteger(f.dim[0]);
                 if (count) {
                     let index = [];
                     if (f.dimIndex) {
@@ -236,7 +259,7 @@ export class SVDParser {
         return fields;
     }
 
-    private static parseRegisters(regInfoOrig: any[], parent: PeripheralNode | PeripheralClusterNode): PeripheralRegisterNode[] {
+    private parseRegisters(regInfoOrig: any[], parent: PeripheralNode | PeripheralClusterNode): PeripheralRegisterNode[] {
         const regInfo = [...regInfoOrig];      // Make a shallow copy,. we will work on this
         const registers: PeripheralRegisterNode[] = [];
 
@@ -244,7 +267,7 @@ export class SVDParser {
         for (const r of regInfo) {
             const nm = r.name[0];
             localRegisterMap[nm] = r;
-            SVDParser.peripheralRegisterMap[parent.name + '.' + nm] = r;
+            this.peripheralRegisterMap[parent.name + '.' + nm] = r;
         }
 
         // It is weird to iterate this way but it can handle forward references, are they legal? not sure
@@ -255,7 +278,7 @@ export class SVDParser {
             const derivedFrom = r.$ ? r.$.derivedFrom : '';
             if (derivedFrom) {
                 const nm = r.name[0];
-                const from = localRegisterMap[derivedFrom] || SVDParser.peripheralRegisterMap[derivedFrom];
+                const from = localRegisterMap[derivedFrom] || this.peripheralRegisterMap[derivedFrom];
                 if (!from) {
                     throw new Error(`SVD error: Invalid 'derivedFrom' "${derivedFrom}" for register "${nm}"`);
                 }
@@ -264,7 +287,7 @@ export class SVDParser {
                 delete combined.$.derivedFrom;          // No need to keep this anymore
                 combined.$._derivedFrom = derivedFrom;  // Save a backup for debugging
                 localRegisterMap[nm] = combined;
-                SVDParser.peripheralRegisterMap[parent.name + '.' + nm] = combined;
+                this.peripheralRegisterMap[parent.name + '.' + nm] = combined;
                 regInfo[ix] = combined;
             }
             ix++;
@@ -283,13 +306,13 @@ export class SVDParser {
             }
 
             if (r.dim) {
-                const increment = r.dimIncrement[0] ? parseInteger(r.dimIncrement[0]) ?? 0 : 0;
-                if (!increment) {
-                    throw new Error(`Unable to parse SVD file: register ${r.name[0]} has dim element, with no/invalid dimIncrement element.`);
-                }
                 const count = parseInteger(r.dim[0]);
                 if (!count || (count < 1)) {
-                    throw new Error(`Unable to parse SVD file: register ${r.name[0]} has dim element, with no dimensions.`);
+                    throw new Error(`Unable to parse SVD file: register ${r.name[0]} has dim element, with no/invalid dimensions.`);
+                }
+                const increment = r.dimIncrement[0] ? parseInteger(r.dimIncrement[0]) ?? 0 : 0;
+                if (!increment && (count > 1)) {
+                    throw new Error(`Unable to parse SVD file: register ${r.name[0]} has dim element, with no/invalid dimIncrement element.`);
                 }
                 const offsetbase = parseInteger(r.addressOffset[0]);
                 if ((offsetbase === undefined) || (offsetbase < 0)) {
@@ -319,7 +342,7 @@ export class SVDParser {
                         addressOffset: offsetbase + (increment * i)
                     });
                     if (r.fields && r.fields.length === 1) {
-                        SVDParser.parseFields(r.fields[0].field, register);
+                        this.parseFields(r.fields[0].field, register);
                     }
                     registers.push(register);
                 }
@@ -332,7 +355,7 @@ export class SVDParser {
                     addressOffset: parseInteger(r.addressOffset[0])
                 });
                 if (r.fields && r.fields.length === 1) {
-                    SVDParser.parseFields(r.fields[0].field, register);
+                    this.parseFields(r.fields[0].field, register);
                 }
                 registers.push(register);
             }
@@ -351,7 +374,7 @@ export class SVDParser {
         return registers;
     }
 
-    private static parseClusters(clusterInfo: any, parent: PeripheralOrClusterNode): PeripheralClusterNode[] {
+    private parseClusters(clusterInfo: any, parent: PeripheralOrClusterNode): PeripheralClusterNode[] {
         const clusters: PeripheralClusterNode[] = [];
 
         if (!clusterInfo) { return []; }
@@ -369,43 +392,44 @@ export class SVDParser {
             }
 
             if (c.dim) {
+                const count = parseInteger(c.dim[0]);
+                if (!count || (count < 1)) {
+                    throw new Error(`Unable to parse SVD file: cluster ${c.name[0]} has dim element, with no/invalid dimensions.`);
+                }
                 const increment = c.dimIncrement[0] ? parseInteger(c.dimIncrement[0]) ?? 0 : 0;
-                if (!increment) {
+                if (!increment && (count > 1)) {
                     throw new Error(`Unable to parse SVD file: cluster ${c.name[0]} has dim element, with no/invalid dimIncrement.`);
                 }
 
-                const count = parseInteger(c.dim[0]);
-                if (count) {
-                    let index = [];
-                    if (c.dimIndex) {
-                        index = parseDimIndex(c.dimIndex[0], count);
-                    } else {
-                        for (let i = 0; i < count; i++) { index.push(`${i}`); }
-                    }
+                let index = [];
+                if (c.dimIndex) {
+                    index = parseDimIndex(c.dimIndex[0], count);
+                } else {
+                    for (let i = 0; i < count; i++) { index.push(`${i}`); }
+                }
 
-                    const namebase: string = c.name[0];
-                    const descbase: string = this.cleanupDescription(c.description ? c.description[0] : '');
-                    const offsetbase = parseInteger(c.addressOffset[0]);
-                    if ((offsetbase === undefined) || (offsetbase < 0)) {
-                        throw new Error(`Unable to parse SVD file: cluster ${c.name[0]} has an no/invalid addressOffset`);
+                const namebase: string = c.name[0];
+                const descbase: string = this.cleanupDescription(c.description ? c.description[0] : '');
+                const offsetbase = parseInteger(c.addressOffset[0]);
+                if ((offsetbase === undefined) || (offsetbase < 0)) {
+                    throw new Error(`Unable to parse SVD file: cluster ${c.name[0]} has an no/invalid addressOffset`);
+                }
+                for (let i = 0; i < count; i++) {
+                    const name = namebase.replace('%s', index[i]);
+                    const description = descbase.replace('%s', index[i]);
+                    const cluster = new PeripheralClusterNode(parent, {
+                        ...baseOptions,
+                        name: name,
+                        description: description,
+                        addressOffset: offsetbase + (increment * i)
+                    });
+                    if (c.register) {
+                        this.parseRegisters(c.register, cluster);
                     }
-                    for (let i = 0; i < count; i++) {
-                        const name = namebase.replace('%s', index[i]);
-                        const description = descbase.replace('%s', index[i]);
-                        const cluster = new PeripheralClusterNode(parent, {
-                            ...baseOptions,
-                            name: name,
-                            description: description,
-                            addressOffset: offsetbase + (increment * i)
-                        });
-                        if (c.register) {
-                            SVDParser.parseRegisters(c.register, cluster);
-                        }
-                        if (c.cluster) {
-                            SVDParser.parseClusters(c.cluster, cluster);
-                        }
-                        clusters.push(cluster);
+                    if (c.cluster) {
+                        this.parseClusters(c.cluster, cluster);
                     }
+                    clusters.push(cluster);
                 }
             } else {
                 const description = this.cleanupDescription(c.description ? c.description[0] : '');
@@ -416,11 +440,11 @@ export class SVDParser {
                     addressOffset: parseInteger(c.addressOffset[0]) ?? 0
                 });
                 if (c.register) {
-                    SVDParser.parseRegisters(c.register, cluster);
+                    this.parseRegisters(c.register, cluster);
                     clusters.push(cluster);
                 }
                 if (c.cluster) {
-                    SVDParser.parseClusters(c.cluster, cluster);
+                    this.parseClusters(c.cluster, cluster);
                     clusters.push(cluster);
                 }
             }
@@ -429,7 +453,7 @@ export class SVDParser {
         return clusters;
     }
 
-    private static parsePeripheral(session: vscode.DebugSession, p: any, _defaults: { accessType: AccessType, size: number, resetValue: number }): PeripheralNode {
+    private parsePeripheral(session: vscode.DebugSession, p: any, _defaults: { accessType: AccessType, size: number, resetValue: number }): PeripheralNode {
         let totalLength = 0;
         if (p.addressBlock) {
             for (const ab of p.addressBlock) {
@@ -453,14 +477,14 @@ export class SVDParser {
         if (p.resetValue) { options.resetValue = parseInteger(p.resetValue[0]); }
         if (p.groupName) { options.groupName = p.groupName[0]; }
 
-        const peripheral = new PeripheralNode(session, SVDParser.gapThreshold, options);
+        const peripheral = new PeripheralNode(session, this.gapThreshold, options);
 
         if (p.registers) {
             if (p.registers[0].register) {
-                SVDParser.parseRegisters(p.registers[0].register, peripheral);
+                this.parseRegisters(p.registers[0].register, peripheral);
             }
             if (p.registers[0].cluster) {
-                SVDParser.parseClusters(p.registers[0].cluster, peripheral);
+                this.parseClusters(p.registers[0].cluster, peripheral);
             }
         }
 
