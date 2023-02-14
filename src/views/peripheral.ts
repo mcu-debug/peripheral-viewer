@@ -29,6 +29,7 @@ import { DebugTracker } from '../debug-tracker';
 import { SvdResolver } from '../svd-resolver';
 import { readFromUrl } from '../utils';
 import { uriExists } from '../vscode-utils';
+import { PeripheralRegisterNode } from './nodes/peripheralregisternode';
 
 const STATE_FILENAME = '.svd-viewer.json';
 
@@ -269,10 +270,14 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
             view,
             view.onDidExpandElement((e) => {
                 e.element.expanded = true;
-                const p = e.element.getPeripheral();
-                if (p) {
-                    p.updateData();
-                    this.refresh();
+                const isReg = e.element instanceof PeripheralRegisterNode;
+                if (!isReg) {
+                    // If we are at a register level, parent already expanded, no update/refresh needed
+                    const p = e.element.getPeripheral();
+                    if (p) {
+                        p.updateData();
+                        this.refresh();
+                    }
                 }
             }),
             view.onDidCollapseElement((e) => {
