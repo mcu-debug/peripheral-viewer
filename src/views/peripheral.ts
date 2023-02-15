@@ -33,7 +33,7 @@ import { PeripheralRegisterNode } from './nodes/peripheralregisternode';
 
 const traceExec = true;
 
-const STATE_FILENAME = '.svd-viewer.json';
+const STATE_FILENAME = 'mcu-debug.svd-viewer.json';
 
 const pathToUri = (path: string): vscode.Uri => {
     try {

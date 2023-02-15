@@ -57,45 +57,44 @@
     "views": {
       "debug": [
         {
-          "id": "svd-viewer.svd",
-          "name": "Peripherals",
-          "when": "svd-viewer.svd.hasData"
+          "id": "mcu-debug.svd-viewer.svd",
+          "name": "XPeripherals"
         }
       ]
     },
     "commands": [
       {
-        "command": "svd-viewer.svd.updateNode",
+        "command": "mcu-debug.svd-viewer.svd.updateNode",
         "title": "Update Value",
         "icon": "$(edit)"
       },
       {
-        "command": "svd-viewer.svd.copyValue",
+        "command": "mcu-debug.svd-viewer.svd.copyValue",
         "title": "Copy Value",
         "icon": "$(files)"
       },
       {
-        "command": "svd-viewer.svd.forceRefresh",
+        "command": "mcu-debug.svd-viewer.svd.forceRefresh",
         "title": "Refresh",
         "icon": "$(refresh)"
       },
       {
-        "command": "svd-viewer.svd.pin",
+        "command": "mcu-debug.svd-viewer.svd.pin",
         "title": "Pin",
         "icon": "$(pin)"
       },
       {
-        "command": "svd-viewer.svd.unpin",
+        "command": "mcu-debug.svd-viewer.svd.unpin",
         "title": "Unpin",
         "icon": "$(pinned)"
       },
       {
-        "command": "svd-viewer.svd.setFormat",
+        "command": "mcu-debug.svd-viewer.svd.setFormat",
         "title": "Set Value Format",
         "icon": "$(symbol-unit)"
       },
       {
-        "command": "svd-viewer.svd.refreshAll",
+        "command": "mcu-debug.svd-viewer.svd.refreshAll",
         "title": "Refresh All",
         "icon": "$(refresh)"
       }
@@ -103,141 +102,141 @@
     "menus": {
       "commandPalette": [
         {
-          "command": "svd-viewer.svd.updateNode",
+          "command": "mcu-debug.svd-viewer.svd.updateNode",
           "when": "false"
         },
         {
-          "command": "svd-viewer.svd.copyValue",
+          "command": "mcu-debug.svd-viewer.svd.copyValue",
           "when": "false"
         },
         {
-          "command": "svd-viewer.svd.forceRefresh",
+          "command": "mcu-debug.svd-viewer.svd.forceRefresh",
           "when": "false"
         },
         {
-          "command": "svd-viewer.svd.pin",
+          "command": "mcu-debug.svd-viewer.svd.pin",
           "when": "false"
         },
         {
-          "command": "svd-viewer.svd.unpin",
+          "command": "mcu-debug.svd-viewer.svd.unpin",
           "when": "false"
         },
         {
-          "command": "svd-viewer.svd.setFormat",
+          "command": "mcu-debug.svd-viewer.svd.setFormat",
           "when": "false"
         },
         {
-          "command": "svd-viewer.svd.refreshAll",
+          "command": "mcu-debug.svd-viewer.svd.refreshAll",
           "when": "false"
         }
       ],
       "touchBar": [
         {
-          "command": "svd-viewer.svd.forceRefresh",
-          "when": "view == svd-viewer.svd && viewItem == registerRW"
+          "command": "mcu-debug.svd-viewer.svd.forceRefresh",
+          "when": "view == mcu-debug.svd-viewer.svd && viewItem == registerRW"
         },
         {
-          "command": "svd-viewer.svd.forceRefresh",
-          "when": "view == svd-viewer.svd && viewItem == register"
+          "command": "mcu-debug.svd-viewer.svd.forceRefresh",
+          "when": "view == mcu-debug.svd-viewer.svd && viewItem == register"
         },
         {
-          "command": "svd-viewer.svd.forceRefresh",
-          "when": "view == svd-viewer.svd && viewItem == registerRO"
+          "command": "mcu-debug.svd-viewer.svd.forceRefresh",
+          "when": "view == mcu-debug.svd-viewer.svd && viewItem == registerRO"
         },
         {
-          "command": "svd-viewer.svd.forceRefresh",
-          "when": "view == svd-viewer.svd && viewItem =~ /peripheral.*/"
+          "command": "mcu-debug.svd-viewer.svd.forceRefresh",
+          "when": "view == mcu-debug.svd-viewer.svd && viewItem =~ /peripheral.*/"
         },
         {
-          "command": "svd-viewer.svd.pin",
-          "when": "view == svd-viewer.svd && viewItem == peripheral"
+          "command": "mcu-debug.svd-viewer.svd.pin",
+          "when": "view == mcu-debug.svd-viewer.svd && viewItem == peripheral"
         },
         {
-          "command": "svd-viewer.svd.unpin",
-          "when": "view == svd-viewer.svd && viewItem == peripheral.pinned"
+          "command": "mcu-debug.svd-viewer.svd.unpin",
+          "when": "view == mcu-debug.svd-viewer.svd && viewItem == peripheral.pinned"
         }
       ],
       "view/title": [
         {
-          "command": "svd-viewer.svd.refreshAll",
-          "when": "view == svd-viewer.svd && debugState == stopped",
+          "command": "mcu-debug.svd-viewer.svd.refreshAll",
+          "when": "view == mcu-debug.svd-viewer.svd && debugState == stopped",
           "group": "navigation"
         }
       ],
       "view/item/context": [
         {
-          "command": "svd-viewer.svd.updateNode",
-          "when": "view == svd-viewer.svd && viewItem == field",
+          "command": "mcu-debug.svd-viewer.svd.updateNode",
+          "when": "view == mcu-debug.svd-viewer.svd && viewItem == field",
           "group": "inline"
         },
         {
-          "command": "svd-viewer.svd.updateNode",
-          "when": "view == svd-viewer.svd && viewItem == fieldWO",
+          "command": "mcu-debug.svd-viewer.svd.updateNode",
+          "when": "view == mcu-debug.svd-viewer.svd && viewItem == fieldWO",
           "group": "inline"
         },
         {
-          "command": "svd-viewer.svd.updateNode",
-          "when": "view == svd-viewer.svd && viewItem == registerRW",
+          "command": "mcu-debug.svd-viewer.svd.updateNode",
+          "when": "view == mcu-debug.svd-viewer.svd && viewItem == registerRW",
           "group": "inline"
         },
         {
-          "command": "svd-viewer.svd.updateNode",
-          "when": "view == svd-viewer.svd && viewItem == registerWO",
+          "command": "mcu-debug.svd-viewer.svd.updateNode",
+          "when": "view == mcu-debug.svd-viewer.svd && viewItem == registerWO",
           "group": "inline"
         },
         {
-          "command": "svd-viewer.svd.copyValue",
-          "when": "view == svd-viewer.svd && viewItem == field",
+          "command": "mcu-debug.svd-viewer.svd.copyValue",
+          "when": "view == mcu-debug.svd-viewer.svd && viewItem == field",
           "group": "inline"
         },
         {
-          "command": "svd-viewer.svd.copyValue",
-          "when": "view == svd-viewer.svd && viewItem == fieldRO",
+          "command": "mcu-debug.svd-viewer.svd.copyValue",
+          "when": "view == mcu-debug.svd-viewer.svd && viewItem == fieldRO",
           "group": "inline"
         },
         {
-          "command": "svd-viewer.svd.copyValue",
-          "when": "view == svd-viewer.svd && viewItem == registerRW",
+          "command": "mcu-debug.svd-viewer.svd.copyValue",
+          "when": "view == mcu-debug.svd-viewer.svd && viewItem == registerRW",
           "group": "inline"
         },
         {
-          "command": "svd-viewer.svd.copyValue",
-          "when": "view == svd-viewer.svd && viewItem == registerRO",
+          "command": "mcu-debug.svd-viewer.svd.copyValue",
+          "when": "view == mcu-debug.svd-viewer.svd && viewItem == registerRO",
           "group": "inline"
         },
         {
-          "command": "svd-viewer.svd.forceRefresh",
-          "when": "view == svd-viewer.svd && viewItem == registerRW",
+          "command": "mcu-debug.svd-viewer.svd.forceRefresh",
+          "when": "view == mcu-debug.svd-viewer.svd && viewItem == registerRW",
           "group": "inline"
         },
         {
-          "command": "svd-viewer.svd.forceRefresh",
-          "when": "view == svd-viewer.svd && viewItem == register",
+          "command": "mcu-debug.svd-viewer.svd.forceRefresh",
+          "when": "view == mcu-debug.svd-viewer.svd && viewItem == register",
           "group": "inline"
         },
         {
-          "command": "svd-viewer.svd.forceRefresh",
-          "when": "view == svd-viewer.svd && viewItem == registerRO",
+          "command": "mcu-debug.svd-viewer.svd.forceRefresh",
+          "when": "view == mcu-debug.svd-viewer.svd && viewItem == registerRO",
           "group": "inline"
         },
         {
-          "command": "svd-viewer.svd.forceRefresh",
-          "when": "view == svd-viewer.svd && viewItem =~ /peripheral.*/",
+          "command": "mcu-debug.svd-viewer.svd.forceRefresh",
+          "when": "view == mcu-debug.svd-viewer.svd && viewItem =~ /peripheral.*/",
           "group": "inline"
         },
         {
-          "command": "svd-viewer.svd.pin",
-          "when": "view == svd-viewer.svd && viewItem == peripheral",
+          "command": "mcu-debug.svd-viewer.svd.pin",
+          "when": "view == mcu-debug.svd-viewer.svd && viewItem == peripheral",
           "group": "inline"
         },
         {
-          "command": "svd-viewer.svd.unpin",
-          "when": "view == svd-viewer.svd && viewItem == peripheral.pinned",
+          "command": "mcu-debug.svd-viewer.svd.unpin",
+          "when": "view == mcu-debug.svd-viewer.svd && viewItem == peripheral.pinned",
           "group": "inline"
         },
         {
-          "command": "svd-viewer.svd.setFormat",
-          "when": "view == svd-viewer.svd",
+          "command": "mcu-debug.svd-viewer.svd.setFormat",
+          "when": "view == mcu-debug.svd-viewer.svd",
           "group": "navigation"
         }
       ]
@@ -245,27 +244,27 @@
     "configuration": {
       "title": "SVD Viewer",
       "properties": {
-        "svd-viewer.svdPathConfig": {
+        "mcu-debug.svd-viewer.svdPathConfig": {
           "type": "string",
           "default": "default",
           "description": "Debug configuration key to use to get the SVD path. If it is set to \"default\" or is missing, \"svdFile\" property is used for cortex-debug and \"svdPath\" is used for other debuggers"
         },
-        "svd-viewer.deviceConfig": {
+        "mcu-debug.svd-viewer.deviceConfig": {
           "type": "string",
           "default": "deviceName",
           "description": "Debug configuration key to use to get the device name"
         },
-        "svd-viewer.processorConfig": {
+        "mcu-debug.svd-viewer.processorConfig": {
           "type": "string",
           "default": "processorName",
           "description": "Debug configuration key to use to get the processor name"
         },
-        "svd-viewer.packAssetUrl": {
+        "mcu-debug.svd-viewer.packAssetUrl": {
           "type": "string",
           "default": "https://pack-asset-service.keil.arm.com",
           "description": "Base URL for CMSIS pack assets"
         },
-        "svd-viewer.svdAddrGapThreshold": {
+        "mcu-debug.svd-viewer.svdAddrGapThreshold": {
           "type": "number",
           "default": 16,
           "multipleOf": 1,

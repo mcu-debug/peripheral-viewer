@@ -2,7 +2,7 @@
  * Copyright (C) 2023 Arm Limited
  */
 
-export const PACKAGE_NAME = 'svd-viewer';
+export const PACKAGE_NAME = 'mcu-debug.svd-viewer';
 export const CONFIG_SVD_PATH = 'svdPathConfig';
 export const CORTEX_DEBUG_PROP = 'svdFile';
 export const OTHER_DEBUG_PROP = 'svdPath';
