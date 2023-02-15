@@ -47,7 +47,7 @@ interface CachedSVDFile {
     svdUri: vscode.Uri;
     mtime: number;
     peripherials: PeripheralNode[]
-};
+}
 
 export class PeripheralTreeForSession extends PeripheralBaseNode {
     private static svdCache: {[path:string]: CachedSVDFile} = {};

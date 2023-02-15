@@ -5,6 +5,23 @@
 import * as vscode from 'vscode';
 import { DebugProtocol } from 'vscode-debugprotocol';
 
+//
+// TODO: We need to decide what to do here. I don't want two version of debug-trackers.
+//
+// 1. We can decide to use the SHARED extension version. There is no reason why the extension version
+//    cannot work over the web/browser. Its extension Kind may need an update. But we should
+//    use the npm module for the tracker instead of duplicating the interfaces/types here. That
+//    npm module should be usable just as a dev-dependency
+//
+// 2. We incorporate the debug-tracker ourselves by using it as a dependency and it be used in
+//    a non-shared mode.
+//
+// Either way, we should remove the duplication of interfaces here (already found one bug) and
+// no need to have two versions
+//
+// And, once that re-write is complete, the copyright to be removed.
+//
+
 const DEBUG_TRACKER_EXTENSION = 'mcu-debug.debug-tracker-vscode';
 
 interface IDebuggerTrackerEvent {
