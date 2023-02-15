@@ -31,7 +31,34 @@ export class MemUtils {
      * @param storeTo This is where read-results go. The first element represents item at `startAddr`
      */
     public static async readMemoryChunks(
-        session: vscode.DebugSession, startAddr: number, specs: AddrRange[], storeTo: number[]): Promise<boolean> {
+        session: vscode.DebugSession, startAddr: number, specs: AddrRange[], storeTo: number[]): Promise<Error[]>{
+        const errors: Error[] = [];
+        for (const spec of specs) {
+            const memoryReference = '0x' + spec.base.toString(16);
+            const request: DebugProtocol.ReadMemoryArguments = {
+                memoryReference,
+                count: spec.length
+            };
+
+            const response: Partial<DebugProtocol.ReadMemoryResponse> = {};
+            try {
+                response.body = await session.customRequest('readMemory', request);
+
+                if (response.body && response.body.data) {
+                    const bytes = Buffer.from(response.body.data, 'base64');
+                    let dst = spec.base - startAddr;
+                    for (const byte of bytes) {
+                        storeTo[dst++] = byte;
+                    }
+                }
+            } catch (e: unknown) {
+                const err = e ? e.toString() : 'Unknown error';
+                errors.push(new Error(`svd-viewer: readMemory failed @ ${memoryReference} for ${request.count} bytes: ${err}`));
+            }
+        }
+        return errors;
+
+        /*
         const promises = specs.map(async r => {
             try {
                 const memoryReference = '0x' + r.base.toString(16);
@@ -76,9 +103,10 @@ export class MemUtils {
         }
 
         return true;
+        */
     }
 
-    public static readMemory(session: vscode.DebugSession, startAddr: number, length: number, storeTo: number[]): Promise<boolean> {
+    public static readMemory(session: vscode.DebugSession, startAddr: number, length: number, storeTo: number[]): Promise<Error[]> {
         const maxChunk = (4 * 1024);
         const ranges = AddressRangesUtils.splitIntoChunks([new AddrRange(startAddr, length)], maxChunk);
         return MemUtils.readMemoryChunks(session, startAddr, ranges, storeTo);

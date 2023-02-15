@@ -126,8 +126,15 @@ export class PeripheralNode extends PeripheralBaseNode {
         }
 
         try {
-            await this.readMemory();
+            const errors = await this.readMemory();
+            for (const error of errors) {
+                const str = `Failed to update peripheral ${this.name}: ${error}`;
+                if (vscode.debug.activeDebugConsole) {
+                    vscode.debug.activeDebugConsole.appendLine(str);
+                }
+            }
         } catch (e) {
+            /* This should never happen */
             const msg = (e as Error).message || 'unknown error';
             const str = `Failed to update peripheral ${this.name}: ${msg}`;
             if (vscode.debug.activeDebugConsole) {
@@ -140,16 +147,17 @@ export class PeripheralNode extends PeripheralBaseNode {
             await Promise.all(promises);
             return true;
         } catch (e) {
-            const msg = (e as Error).message || 'unknown error';
-            const str = `Failed to update peripheral ${this.name}: ${msg}`;
+            /* This should never happen */
+            const str = `Internal error: Failed to update peripheral ${this.name} after memory reads`;
             if (vscode.debug.activeDebugConsole) {
                 vscode.debug.activeDebugConsole.appendLine(str);
             }
-            throw new Error(str);
+            // Could return false, but some things could have been updated. Returning true triggers a GUI refresh
+            return true;
         }
     }
 
-    protected readMemory(): Promise<boolean> {
+    protected readMemory(): Promise<Error[]> {
         if (!this.currentValue) {
             this.currentValue = new Array<number>(this.totalLength);
         }

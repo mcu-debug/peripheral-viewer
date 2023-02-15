@@ -3,6 +3,7 @@
  */
 
 import * as vscode from 'vscode';
+import { DebugProtocol } from 'vscode-debugprotocol';
 
 const DEBUG_TRACKER_EXTENSION = 'mcu-debug.debug-tracker-vscode';
 
@@ -48,6 +49,9 @@ export class DebugTracker {
     private _onDidStopDebug: vscode.EventEmitter<vscode.DebugSession> = new vscode.EventEmitter<vscode.DebugSession>();
     public readonly onDidStopDebug: vscode.Event<vscode.DebugSession> = this._onDidStopDebug.event;
 
+    private _onDidContinueDebug: vscode.EventEmitter<vscode.DebugSession> = new vscode.EventEmitter<vscode.DebugSession>();
+    public readonly onDidContinueDebug: vscode.Event<vscode.DebugSession> = this._onDidContinueDebug.event;
+
     private sessionIdMap: {[id: string]: vscode.DebugSession} = {};
 
     public async activate(context: vscode.ExtensionContext): Promise<void> {
@@ -68,9 +72,10 @@ export class DebugTracker {
                             if (event.event === DebugSessionStatus.Terminated) {
                                 this._onWillStopSession.fire(session);
                                 delete this.sessionIdMap[event.sessionId];
-                            }
-                            if (event.event === DebugSessionStatus.Stopped) {
+                            } else if (event.event === DebugSessionStatus.Stopped) {
                                 this._onDidStopDebug.fire(session);
+                            } else if (event.event === DebugSessionStatus.Running) {
+                                this._onDidContinueDebug.fire(session);
                             }
                         }
                     }
@@ -85,6 +90,14 @@ export class DebugTracker {
                     onDidSendMessage: message => {
                         if (message.type === 'event' && message.event === 'stopped') {
                             this._onDidStopDebug.fire(session);
+                        } else if (message.type === 'event' && message.event === 'continued') {
+                            this._onDidContinueDebug.fire(session);
+                        } else if (message.type === 'response') {
+                            const continueCommands = ['continue', 'reverseContinue', 'step', 'stepIn', 'stepOut', 'stepBack', 'next', 'goto'];
+                            const rsp: DebugProtocol.Response = message as DebugProtocol.Response;
+                            if (rsp?.success && continueCommands.includes(rsp.command)) {
+                                this._onDidContinueDebug.fire(session);
+                            }
                         }
                     }
                 };
