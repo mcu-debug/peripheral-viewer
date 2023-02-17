@@ -17,7 +17,7 @@
  */
 
 import * as vscode from 'vscode';
-import type { DebugProtocol } from 'vscode-debugprotocol';
+import type { DebugProtocol } from '@vscode/debugprotocol';
 import { AddrRange, AddressRangesUtils } from './addrranges';
 
 /** Has utility functions to read memory in chunks into a storage space */

@@ -25,7 +25,7 @@ import { MessageNode } from './nodes/messagenode';
 import { NodeSetting } from '../common';
 import { SvdData, SVDParser } from '../svd-parser';
 import { AddrRange } from '../addrranges';
-import { DebugTracker } from '../debug-tracker';
+import { DebugTrackerWrapper } from '../debug-tracker-wrapper';
 import { SvdResolver } from '../svd-resolver';
 import { readFromUrl } from '../utils';
 import { uriExists } from '../vscode-utils';
@@ -307,7 +307,7 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
     protected sessionPeripheralsMap = new Map <string, PeripheralTreeForSession>();
     protected oldState = new Map <string, vscode.TreeItemCollapsibleState>();
 
-    constructor(tracker: DebugTracker, protected resolver: SvdResolver) {
+    constructor(tracker: DebugTrackerWrapper, protected resolver: SvdResolver) {
         tracker.onWillStartSession(session => this.debugSessionStarted(session));
         tracker.onWillStopSession(session => this.debugSessionTerminated(session));
         tracker.onDidStopDebug(session => this.debugStopped(session));

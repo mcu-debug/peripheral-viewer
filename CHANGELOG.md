@@ -1,7 +1,24 @@
 # Change Log
 
 
+## [v1.4.0] - 2023-02-17
+
+- First release from a new repo and new extension inherited from https://github.com/cortex-debug/svd-viewer which in turn derived from https://github.com/Marus/cortex-debug. Yes, version number was bumped so Rob can still make any updates to his extension during the transition period
+- Note that we are still in `Preview` mode
+- Big thanks to [Rob Moran](https://github.com/cortex-debug/svd-viewer/commits?author=thegecko). He did many things to help the community (especially me)
+  - Made the SVD viewer browser friendly, and taught me how to do it
+  - Refactored a lot of the code from Cortex-Debug and modified it to be browser friendly
+  - Added support for CMSIS packs
+- Several changes, improvements and fixes have been made
+  - We now cache SVD info for faster restarts
+  - Several fixes that were pending on the Cortex-Debug repo
+- Note that cortex-debug itself will soon no longer do its own SVD/Peripheral support. We hope you use this extension (or others)
+- It is still compatible with Desktop and Browser usage
+
+# Prior History
+
 ## [v1.2.1] - 2023-XX-XX
+- Never released publicly
 
 ### New Features
 
