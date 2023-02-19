@@ -43,6 +43,7 @@ export interface FieldOptions {
 }
 
 export class PeripheralFieldNode extends PeripheralBaseNode {
+    public session: vscode.DebugSession | undefined;
     public readonly name: string;
     public readonly description: string;
     public readonly offset: number;

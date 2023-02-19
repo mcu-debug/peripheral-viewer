@@ -18,7 +18,6 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import * as vscode from 'vscode';
 import { PeripheralRegisterNode } from './views/nodes/peripheralregisternode';
 import { PeripheralClusterNode, PeripheralOrClusterNode } from './views/nodes/peripheralclusternode';
 import { PeripheralFieldNode, EnumerationMap, EnumeratedValue } from './views/nodes/peripheralfieldnode';
@@ -74,7 +73,7 @@ export class SVDParser {
     constructor() {}
 
     public async parseSVD(
-        session: vscode.DebugSession, svdData: SvdData, gapThreshold: number): Promise<PeripheralNode[]> {
+        svdData: SvdData, gapThreshold: number): Promise<PeripheralNode[]> {
         this.gapThreshold = gapThreshold;
         this.enumTypeValuesMap = {};
         this.peripheralRegisterMap = {};
@@ -111,7 +110,7 @@ export class SVDParser {
 
         const peripherials = [];
         for (const key in peripheralMap) {
-            peripherials.push(this.parsePeripheral(session, peripheralMap[key], defaultOptions));
+            peripherials.push(this.parsePeripheral(peripheralMap[key], defaultOptions));
         }
 
         peripherials.sort(PeripheralNode.compare);
@@ -453,7 +452,7 @@ export class SVDParser {
         return clusters;
     }
 
-    private parsePeripheral(session: vscode.DebugSession, p: any, _defaults: { accessType: AccessType, size: number, resetValue: number }): PeripheralNode {
+    private parsePeripheral(p: any, _defaults: { accessType: AccessType, size: number, resetValue: number }): PeripheralNode {
         let totalLength = 0;
         if (p.addressBlock) {
             for (const ab of p.addressBlock) {
@@ -477,7 +476,7 @@ export class SVDParser {
         if (p.resetValue) { options.resetValue = parseInteger(p.resetValue[0]); }
         if (p.groupName) { options.groupName = p.groupName[0]; }
 
-        const peripheral = new PeripheralNode(session, this.gapThreshold, options);
+        const peripheral = new PeripheralNode(this.gapThreshold, options);
 
         if (p.registers) {
             if (p.registers[0].register) {

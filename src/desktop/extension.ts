@@ -13,11 +13,11 @@ export const activate = async (context: vscode.ExtensionContext): Promise<SvdReg
     const tracker = new DebugTrackerWrapper();
     const registry = new SvdRegistry();
     const resolver = new SvdResolver(registry);
-    const peripheralTree = new PeripheralTreeProvider(tracker, resolver);
+    const peripheralTree = new PeripheralTreeProvider(tracker, resolver, context);
     const commands = new Commands(peripheralTree);
 
     await tracker.activate(context);
-    await peripheralTree.activate(context);
+    await peripheralTree.activate();
     await commands.activate(context);
 
     return registry;

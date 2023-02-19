@@ -53,7 +53,7 @@ export class PeripheralNode extends PeripheralBaseNode {
 
     private currentValue: number[] = [];
 
-    constructor(public session: vscode.DebugSession, public gapThreshold: number, options: PeripheralOptions) {
+    constructor(public gapThreshold: number, options: PeripheralOptions) {
         super();
 
         this.name = options.name;
@@ -157,12 +157,16 @@ export class PeripheralNode extends PeripheralBaseNode {
         }
     }
 
-    protected readMemory(): Promise<Error[]> {
+    protected readMemory(): Promise<Error[]> | [] {
         if (!this.currentValue) {
             this.currentValue = new Array<number>(this.totalLength);
         }
 
-        return MemUtils.readMemoryChunks(this.session, this.baseAddress, this.addrRanges, this.currentValue);
+        if (this.session) {
+            return MemUtils.readMemoryChunks(this.session, this.baseAddress, this.addrRanges, this.currentValue);
+        } else {
+            return [];
+        }
     }
 
     public collectRanges(): void {

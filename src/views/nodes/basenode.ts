@@ -68,6 +68,14 @@ export abstract class PeripheralBaseNode extends BaseNode {
 
     public abstract saveState(path?: string): NodeSetting[];
     public abstract findByPath(path: string[]): PeripheralBaseNode | undefined;
+
+    public async setSession(session: DebugSession): Promise<void> {
+        this.session = session;
+        const children = await this.getChildren();
+        for (const child of children) {
+            child.setSession(session);
+        }
+    }
 }
 
 export abstract class ClusterOrRegisterBaseNode extends PeripheralBaseNode {

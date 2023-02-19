@@ -40,12 +40,10 @@ export class MemUtils {
                 count: spec.length
             };
 
-            const response: Partial<DebugProtocol.ReadMemoryResponse> = {};
             try {
-                response.body = await session.customRequest('readMemory', request);
-
-                if (response.body && response.body.data) {
-                    const bytes = Buffer.from(response.body.data, 'base64');
+                const responseBody = await session.customRequest('readMemory', request);
+                if (responseBody && responseBody.data) {
+                    const bytes = Buffer.from(responseBody.data, 'base64');
                     let dst = spec.base - startAddr;
                     for (const byte of bytes) {
                         storeTo[dst++] = byte;
@@ -53,7 +51,7 @@ export class MemUtils {
                 }
             } catch (e: unknown) {
                 const err = e ? e.toString() : 'Unknown error';
-                errors.push(new Error(`svd-viewer: readMemory failed @ ${memoryReference} for ${request.count} bytes: ${err}`));
+                errors.push(new Error(`svd-viewer: readMemory failed @ ${memoryReference} for ${request.count} bytes: ${err}, session=${session.id}`));
             }
         }
         return errors;
