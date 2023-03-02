@@ -55,7 +55,7 @@ export class DebugTrackerWrapper {
                 }
             });
         } else {
-            vscode.window.showErrorMessage('Fatal error: Could not start a debug tracker for svd-viewer');
+            vscode.window.showErrorMessage('Fatal error: Could not start a debug tracker for peripheral-viewer');
         }
     }
 

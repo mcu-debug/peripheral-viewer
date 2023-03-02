@@ -51,7 +51,7 @@ export class MemUtils {
                 }
             } catch (e: unknown) {
                 const err = e ? e.toString() : 'Unknown error';
-                errors.push(new Error(`svd-viewer: readMemory failed @ ${memoryReference} for ${request.count} bytes: ${err}, session=${session.id}`));
+                errors.push(new Error(`peripheral-viewer: readMemory failed @ ${memoryReference} for ${request.count} bytes: ${err}, session=${session.id}`));
             }
         }
         return errors;

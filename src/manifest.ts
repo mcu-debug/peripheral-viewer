@@ -2,7 +2,7 @@
  * Copyright (C) 2023 Arm Limited
  */
 
-export const PACKAGE_NAME = 'mcu-debug.svd-viewer';
+export const PACKAGE_NAME = 'mcu-debug.peripheral-viewer';
 export const CONFIG_SVD_PATH = 'svdPathConfig';
 export const DEFAULT_SVD_CONFIGS = ['svdPath', 'svdFile'];
 export const CONFIG_DEVICE = 'deviceConfig';

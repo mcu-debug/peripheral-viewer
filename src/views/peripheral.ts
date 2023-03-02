@@ -352,7 +352,7 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
     private static firstTime = true;
     public async debugSessionStarted(session: vscode.DebugSession): Promise<void> {
         if (traceExec && vscode.debug.activeDebugConsole) {
-            vscode.debug.activeDebugConsole.appendLine('svd-viewer: ' + session.id + ': Session Started');
+            vscode.debug.activeDebugConsole.appendLine('peripheral-viewer: ' + session.id + ': Session Started');
         }
 
         const wsFolderPath = session.workspaceFolder ? session.workspaceFolder.uri : vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders[0].uri;
@@ -404,7 +404,7 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
             return;
         }
         if (traceExec && vscode.debug.activeDebugConsole) {
-            vscode.debug.activeDebugConsole.appendLine('svd-viewer: ' + session.id + ': Session Terminated');
+            vscode.debug.activeDebugConsole.appendLine('peripheral-viewer: ' + session.id + ': Session Terminated');
         }
         if (this.stopedTimer) {
             clearTimeout(this.stopedTimer);
@@ -426,7 +426,7 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
             return;
         }
         if (traceExec && vscode.debug.activeDebugConsole) {
-            vscode.debug.activeDebugConsole.appendLine('svd-viewer: ' + session.id + ': Session Stopped');
+            vscode.debug.activeDebugConsole.appendLine('peripheral-viewer: ' + session.id + ': Session Stopped');
         }
 
         // We are stopped for many reasons very briefly where we cannot even execute any queries
@@ -446,7 +446,7 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
             return;
         }
         if (traceExec && vscode.debug.activeDebugConsole) {
-            vscode.debug.activeDebugConsole.appendLine('svd-viewer: ' + session.id + ': Session Continued');
+            vscode.debug.activeDebugConsole.appendLine('peripheral-viewer: ' + session.id + ': Session Continued');
         }
         if (this.stopedTimer) {
             clearTimeout(this.stopedTimer);
