@@ -17,46 +17,52 @@ export class SvdResolver {
     }
 
     public async resolve(session: vscode.DebugSession, wsFolderPath?: vscode.Uri): Promise<string | undefined> {
-        let svdConfig = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<string>(manifest.CONFIG_SVD_PATH);
-        if (!svdConfig || (svdConfig === 'default')) {
-            svdConfig = session.type === 'cortex-debug' ? manifest.CORTEX_DEBUG_PROP : manifest.OTHER_DEBUG_PROP;
+        const fromConfig = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<string>(manifest.CONFIG_SVD_PATH);
+        const svdPropNames = [];
+        if (!fromConfig || (fromConfig === 'default')) {
+            svdPropNames.push(...manifest.DEFAULT_SVD_CONFIGS);
+        } else {
+            svdPropNames.push(fromConfig);
         }
-        let svdPath = session.configuration[svdConfig];
 
         const deviceConfig = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<string>(manifest.CONFIG_DEVICE) || manifest.DEFAULT_DEVICE;
         const deviceName = session.configuration[deviceConfig];
-
         const processorConfig = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<string>(manifest.CONFIG_PROCESSOR) || manifest.DEFAULT_PROCESSOR;
         const processorName = session.configuration[processorConfig];
 
-        if (!svdPath && !deviceName) {
-            return undefined;
-        }
+        for (const svdProp of svdPropNames) {
+            let svdPath = session.configuration[svdProp];
+            if (!svdPath && !deviceName) {
+                continue;
+            }
 
-        try {
-            if (svdPath) {
-                const pack = parsePackString(svdPath);
+            try {
+                if (svdPath) {
+                    const pack = parsePackString(svdPath);
 
-                if (pack) {
-                    svdPath = await this.loadFromPack(pack, deviceName, processorName);
-                } else if (vscode.env.uiKind === vscode.UIKind.Desktop && !svdPath.startsWith('http')) {
-                    // On desktop, ensure full path
-                    if (!isAbsolute(svdPath) && wsFolderPath) {
-                        svdPath = normalize(join(wsFolderPath.fsPath, svdPath));
+                    if (pack) {
+                        svdPath = await this.loadFromPack(pack, deviceName, processorName);
+                    } else if (vscode.env.uiKind === vscode.UIKind.Desktop && !svdPath.startsWith('http')) {
+                        // On desktop, ensure full path
+                        if (!isAbsolute(svdPath) && wsFolderPath) {
+                            svdPath = normalize(join(wsFolderPath.fsPath, svdPath));
+                        }
+                    }
+                } else if (deviceName) {
+                    svdPath = this.registry.getSVDFile(deviceName);
+                    if (!svdPath && (svdProp === manifest.CONFIG_CORTEX_DEBUG_CONFIG)) {
+                        svdPath = await this.registry.getSVDFileFromCortexDebug(deviceName);
                     }
                 }
-            } else if (deviceName) {
-                svdPath = this.registry.getSVDFile(deviceName);
-                if (!svdPath) {
-                    svdPath = await this.registry.getSVDFileFromCortexDebug(deviceName);
-                }
+            } catch(e) {
+                // eslint-disable-next-line no-console
+                console.warn(e);
             }
-        } catch(e) {
-            // eslint-disable-next-line no-console
-            console.warn(e);
+            if (svdPath) {
+                return svdPath;
+            }
         }
-
-        return svdPath;
+        return undefined;
     }
 
     protected async loadFromPack(pack: Pack, deviceName: string | undefined, processorName: string | undefined): Promise<string | undefined> {

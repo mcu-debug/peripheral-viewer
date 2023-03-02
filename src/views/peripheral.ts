@@ -30,7 +30,7 @@ import { SvdResolver } from '../svd-resolver';
 import { readFromUrl } from '../utils';
 import { PeripheralRegisterNode } from './nodes/peripheralregisternode';
 
-const traceExec = true;
+const traceExec = false;
 
 const pathToUri = (path: string): vscode.Uri => {
     try {
@@ -71,23 +71,6 @@ export class PeripheralTreeForSession extends PeripheralBaseNode {
         const propName = PeripheralTreeForSession.getStatePropName(this.session);
         const state = context.workspaceState.get(propName) as NodeSetting[] || [];
         return state;
-
-
-        /*
-        const stateUri = this.getSvdStateUri();
-        if (stateUri) {
-            const exists = await uriExists(stateUri);
-            if (exists) {
-                await vscode.workspace.fs.stat(stateUri);
-                const data = await vscode.workspace.fs.readFile(stateUri);
-                const decoder = new TextDecoder();
-                const text = decoder.decode(data);
-                return JSON.parse(text);
-            }
-        }
-
-        return [];
-        */
     }
 
     private async saveSvdState(state: NodeSetting[], context: vscode.ExtensionContext): Promise<void> {
@@ -95,21 +78,6 @@ export class PeripheralTreeForSession extends PeripheralBaseNode {
             const propName = PeripheralTreeForSession.getStatePropName(this.session);
             context.workspaceState.update(propName, state);
         }
-        return;
-
-        /*
-        const stateUri = this.getSvdStateUri();
-        if (stateUri) {
-            try {
-                const text = JSON.stringify(state);
-                const encoder = new TextEncoder();
-                const data = encoder.encode(text);
-                await vscode.workspace.fs.writeFile(stateUri, data);
-            } catch (e) {
-                vscode.window.showWarningMessage(`Unable to save peripheral preferences ${e}`);
-            }
-        }
-        */
     }
 
     public saveState(): NodeSetting[] {
@@ -381,6 +349,7 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
         }
     }
 
+    private static firstTime = true;
     public async debugSessionStarted(session: vscode.DebugSession): Promise<void> {
         if (traceExec && vscode.debug.activeDebugConsole) {
             vscode.debug.activeDebugConsole.appendLine('svd-viewer: ' + session.id + ': Session Started');
@@ -391,6 +360,13 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
 
         if (!svdPath) {
             return;
+        }
+
+        // We enable our panel once and just stay there. Users can disable if they want in multiple ways
+        if (PeripheralTreeProvider.firstTime) {
+            PeripheralTreeProvider.firstTime = false;
+            const cxtName = `${manifest.PACKAGE_NAME}.hadData`;
+            vscode.commands.executeCommand('setContext', cxtName, true);
         }
 
         if (this.sessionPeripheralsMap.get(session.id)) {
@@ -421,8 +397,6 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
         } finally {
             this._onDidChangeTreeData.fire(undefined);
         }
-
-        vscode.commands.executeCommand('setContext', `${manifest.PACKAGE_NAME}.svd.hasData`, this.sessionPeripheralsMap.size > 0);
     }
 
     public debugSessionTerminated(session: vscode.DebugSession): void {
@@ -444,8 +418,6 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
             regs.sessionTerminated(this.context);
             this._onDidChangeTreeData.fire(undefined);
         }
-
-        vscode.commands.executeCommand('setContext', `${manifest.PACKAGE_NAME}.svd.hasData`, this.sessionPeripheralsMap.size > 0);
     }
 
     private stopedTimer: NodeJS.Timeout | undefined;

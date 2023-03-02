@@ -25,7 +25,6 @@ export class DebugTrackerWrapper {
     public readonly onDidContinueDebug: vscode.Event<vscode.DebugSession> = this._onDidContinueDebug.event;
 
     private sessionIdMap: {[id: string]: vscode.DebugSession} = {};
-
     public async activate(context: vscode.ExtensionContext): Promise<void> {
         const debugtracker = await this.getTracker(context);
         if (debugtracker) {
@@ -36,12 +35,14 @@ export class DebugTrackerWrapper {
                     debuggers: '*',
                     handler: async (event: IDebuggerTrackerEvent) => {
                         const session = this.sessionIdMap[event.sessionId];
-                        if (event.event === DebugSessionStatus.Initializing && event.session) {
-                            // Session is passed in only when session is initializing, so we have to cache it
+                        if (event.session && event.event === DebugSessionStatus.Initializing) {
+                            // Session is passed in only when session is initializing, so we have to cache it, but wait
+                            // till session actually starts to fire the started event. It may never start
                             this.sessionIdMap[event.sessionId] = event.session;
-                            this._onWillStartSession.fire(event.session);
                         } else if (session) {
-                            if (event.event === DebugSessionStatus.Terminated) {
+                            if (event.event === DebugSessionStatus.Started) {
+                                this._onWillStartSession.fire(session);
+                            } else if (event.event === DebugSessionStatus.Terminated) {
                                 this._onWillStopSession.fire(session);
                                 delete this.sessionIdMap[event.sessionId];
                             } else if (event.event === DebugSessionStatus.Stopped) {
@@ -54,7 +55,7 @@ export class DebugTrackerWrapper {
                 }
             });
         } else {
-            vscode.window.showErrorMessage('Fatal error: Could not start a debug tracker');
+            vscode.window.showErrorMessage('Fatal error: Could not start a debug tracker for svd-viewer');
         }
     }
 

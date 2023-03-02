@@ -59,7 +59,8 @@
       "debug": [
         {
           "id": "mcu-debug.svd-viewer.svd",
-          "name": "XPeripherals"
+          "name": "XPeripherals",
+          "when": "mcu-debug.svd-viewer.hadData"
         }
       ]
     },
@@ -248,7 +249,7 @@
         "mcu-debug.svd-viewer.svdPathConfig": {
           "type": "string",
           "default": "default",
-          "description": "Debug configuration key to use to get the SVD path. If it is set to \"default\" or is missing, \"svdFile\" property is used for cortex-debug and \"svdPath\" is used for other debuggers"
+          "description": "Debug configuration key to use to get the SVD path. If it is set to \"default\" or is missing, \"svdPath\" and \"svdFile\" are used as possible keys, in that order"
         },
         "mcu-debug.svd-viewer.deviceConfig": {
           "type": "string",
@@ -281,6 +282,7 @@
     "onStartupFinished"
   ],
   "extensionKind": [
-    "ui"
+    "ui",
+    "workspace"
   ]
 }
