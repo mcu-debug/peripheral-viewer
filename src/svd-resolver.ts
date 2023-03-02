@@ -50,7 +50,7 @@ export class SvdResolver {
                     }
                 } else if (deviceName) {
                     svdPath = this.registry.getSVDFile(deviceName);
-                    if (!svdPath && (svdProp === manifest.CONFIG_CORTEX_DEBUG_CONFIG)) {
+                    if (!svdPath && (manifest.DEFAULT_SVD_CONFIGS.findIndex((v) => v === svdProp) >= 0)) {
                         svdPath = await this.registry.getSVDFileFromCortexDebug(deviceName);
                     }
                 }

@@ -4,8 +4,7 @@
 
 export const PACKAGE_NAME = 'mcu-debug.svd-viewer';
 export const CONFIG_SVD_PATH = 'svdPathConfig';
-export const CONFIG_CORTEX_DEBUG_CONFIG = 'svdFile';
-export const DEFAULT_SVD_CONFIGS = ['svdPath', CONFIG_CORTEX_DEBUG_CONFIG];
+export const DEFAULT_SVD_CONFIGS = ['svdPath', 'svdFile'];
 export const CONFIG_DEVICE = 'deviceConfig';
 export const DEFAULT_DEVICE = 'deviceName';
 export const CONFIG_PROCESSOR = 'processorConfig';
