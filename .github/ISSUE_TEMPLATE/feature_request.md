@@ -10,7 +10,7 @@ assignees: ''
 Type: Feature Request
 
 <!-- Prior to creating a feature request, please review
-existing issues at https://github.com/cortex-debug/svd-viewer/issues
+existing issues at https://github.com/mcu-debug/peripheral-viewer/issues
 to avoid creating duplicates.
 -->
 

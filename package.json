@@ -1,6 +1,6 @@
 {
   "name": "peripheral-viewer",
-  "displayName": "SVD Viewer",
+  "displayName": "Peripheral Viewer",
   "description": "Standalone Peripheral(SVD) Viewer extension extracted from cortex-debug, now works with any debugger",
   "version": "1.4.0",
   "preview": true,
@@ -244,7 +244,7 @@
       ]
     },
     "configuration": {
-      "title": "SVD Viewer",
+      "title": "Peripheral Viewer",
       "properties": {
         "mcu-debug.peripheral-viewer.svdPathConfig": {
           "type": "string",

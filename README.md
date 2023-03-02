@@ -1,12 +1,12 @@
-# Cortex Debug SVD Viewer
+# MCU Peripheral Viewer
 
-Standalone SVD Viewer extension extracted from [cortex-debug](https://github.com/Marus/cortex-debug)
+Standalone SVD Viewer extension extracted from [cortex-debug](https://github.com/Marus/cortex-debug) but now work with any debugger that supports the Microsoft Debug Protocol
 
 ## Specifying SVD Files
 
 The SVD Viewer extension uses [System View Description](http://www.keil.com/pack/doc/CMSIS/SVD/html/index.html) (SVD) files to display information about the selected part, including the Cortex Peripherals view.
 
-Choose one of the following methods to specify your SVD file in your launch configuration:
+Choose one of the following methods to specify your SVD file in your `launch.json` configuration(s):
 
 ### Use the CMSIS pack asset service
 
@@ -77,6 +77,6 @@ All variable key names used to extract data from debug launch configurations can
 
 The following list outlines the setting names and default values:
 
-- `svd-viewer.svdPathConfig` - Debug configuration key to use to get the SVD path (default `default`). If it is empty or set to `default`, the property `svdFile` is used for cortex-debug and `svdPath` for other debuggers.
-- `svd-viewer.deviceConfig` - Debug configuration key to use to get the device name (default: `deviceName`)
-- `svd-viewer.processorConfig` - Debug configuration key to use to get the processor name (default: `processorName`)
+- `peripheral-viewer.svdPathConfig` - Debug configuration key to use to get the SVD path (default `default`). If it is empty or set to `default`, the property `svdFile` is used for cortex-debug and `svdPath` for other debuggers.
+- `peripheral-viewer.deviceConfig` - Debug configuration key to use to get the device name (default: `deviceName`)
+- `peripheral-viewer.processorConfig` - Debug configuration key to use to get the processor name (default: `processorName`)

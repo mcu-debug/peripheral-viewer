@@ -26,7 +26,7 @@
 
 ### Changes
 
-- Transferred publisher and source to [mcu-debug/svd-viewer](https://github.com/mcu-debug/svd-viewer) ([Haneef Mohammed](https://github.com/haneefdm))
+- Transferred publisher and source to [mcu-debug/peripheral-viewer](https://github.com/mcu-debug/svd-viewer) ([Haneef Mohammed](https://github.com/haneefdm))
 
 ## [v1.1.1] - 2023-01-30
 
