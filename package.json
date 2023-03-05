@@ -2,7 +2,7 @@
   "name": "peripheral-viewer",
   "displayName": "Peripheral Viewer",
   "description": "Standalone Peripheral(SVD) Viewer extension extracted from cortex-debug, now works with any debugger",
-  "version": "1.4.2",
+  "version": "1.4.3",
   "preview": true,
   "publisher": "mcu-debug",
   "author": "haneefdm & thegecko",
