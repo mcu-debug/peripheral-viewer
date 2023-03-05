@@ -349,7 +349,6 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
         }
     }
 
-    private static firstTime = true;
     public async debugSessionStarted(session: vscode.DebugSession): Promise<void> {
         if (traceExec && vscode.debug.activeDebugConsole) {
             vscode.debug.activeDebugConsole.appendLine('peripheral-viewer: ' + session.id + ': Session Started');
@@ -363,11 +362,8 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
         }
 
         // We enable our panel once and just stay there. Users can disable if they want in multiple ways
-        if (PeripheralTreeProvider.firstTime) {
-            PeripheralTreeProvider.firstTime = false;
-            const cxtName = `${manifest.PACKAGE_NAME}.hadData`;
-            vscode.commands.executeCommand('setContext', cxtName, true);
-        }
+        const cxtName = `${manifest.PACKAGE_NAME}.hadData`;
+        vscode.commands.executeCommand('setContext', cxtName, true);
 
         if (this.sessionPeripheralsMap.get(session.id)) {
             this._onDidChangeTreeData.fire(undefined);

@@ -77,6 +77,6 @@ All variable key names used to extract data from debug launch configurations can
 
 The following list outlines the setting names and default values:
 
-- `peripheral-viewer.svdPathConfig` - Debug configuration key to use to get the SVD path (default `default`). If it is empty or set to `default`, the property `svdFile` is used for cortex-debug and `svdPath` for other debuggers.
-- `peripheral-viewer.deviceConfig` - Debug configuration key to use to get the device name (default: `deviceName`)
-- `peripheral-viewer.processorConfig` - Debug configuration key to use to get the processor name (default: `processorName`)
+- `mcu-debug.peripheral-viewer.svdPathConfig` - Debug configuration key to use to get the SVD path (default `default`). If it is empty or set to `default`, the property `svdFile` is used for cortex-debug and `svdPath` for other debuggers.
+- `mcu-debug.peripheral-viewer.deviceConfig` - Debug configuration key to use to get the device name (default: `deviceName`)
+- `mcu-debug.peripheral-viewer.processorConfig` - Debug configuration key to use to get the processor name (default: `processorName`)
