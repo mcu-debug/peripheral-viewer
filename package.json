@@ -273,6 +273,14 @@
           "minimum": -1,
           "maximum": 32,
           "description": "If the gap between registers is less than this threshold (multiple of 8), combine into a single read from device. -1 means never combine registers and is very slow"
+        },
+        "mcu-debug.peripheral-viewer.debugLevel": {
+          "type": "number",
+          "default": 0,
+          "minimum": 0,
+          "maximum": 2,
+          "multipleOf": 1,
+          "description": "Enable debug output in the OUTPUT Tab (Peripheral Viewer section). Some debug output may also be found in the `Mcu-debug Tracker` section which is controlled separately. Changing this value requires a Reload of the window"
         }
       }
     }

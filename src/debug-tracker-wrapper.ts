@@ -6,11 +6,13 @@
  */
 
 import * as vscode from 'vscode';
+import * as manifest from './manifest';
 import { DebugSessionStatus, DebugTracker, IDebuggerTrackerEvent, IDebugTracker, TRACKER_EXT_ID } from 'debug-tracker-vscode';
-import { logOutputChannel, logToOutputWindow } from './vscode-utils';
+import { setLogOutput, logOutputChannel, logToOutputWindow } from './vscode-utils';
 
 export class DebugTrackerWrapper {
     private isLocalTracker = false;
+    private dbgLevel: 0 | 1 | 2 = 0;
     public constructor(private debugType = '*') {
     }
 
@@ -28,6 +30,14 @@ export class DebugTrackerWrapper {
 
     private sessionIdMap: {[id: string]: vscode.DebugSession} = {};
     public async activate(context: vscode.ExtensionContext): Promise<void> {
+        // TODO: Make this dynamic so reloads are needed if setting changes
+        const dbgLevel = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<number>(manifest.DEBUG_LEVEL, 0);
+        if ((dbgLevel >= 0) && (dbgLevel <= 2)) {
+            this.dbgLevel = dbgLevel as 0 | 1 | 2;
+        }
+        if (this.dbgLevel > 0) {
+            setLogOutput(true);
+        }
         logToOutputWindow('activating debug tracker');
         const debugtracker = await this.getTracker(context);
         if (debugtracker) {
@@ -37,7 +47,7 @@ export class DebugTrackerWrapper {
                 body: {
                     debuggers: '*',
                     handler: async (event: IDebuggerTrackerEvent) => {
-                        if (!this.isLocalTracker) {
+                        if (!this.isLocalTracker || (this.dbgLevel > 1)) {
                             logToOutputWindow(JSON.stringify(event));
                         }
                         const session = this.sessionIdMap[event.sessionId];
@@ -78,7 +88,7 @@ export class DebugTrackerWrapper {
             // We could use our own channel in the future for debug
             this.isLocalTracker = true;
             logToOutputWindow('Using local debug tracker');
-            ret = new DebugTracker(context, logOutputChannel, 1);
+            ret = new DebugTracker(context, logOutputChannel, this.dbgLevel);
         } else {
             logToOutputWindow('Using shared debug tracker');
         }

@@ -53,10 +53,11 @@ export const getSelection = async (title: string, items: QuickPickItem[], value?
     }
 };
 
-
+let enableLogOutput = false;
 export let logOutputChannel: vscode.OutputChannel | undefined;
-// eslint-disable-next-line prefer-const
-export let enableLogOutput = false;     // TODO: This should be an extension option
+export function setLogOutput(val: boolean) {
+    enableLogOutput = val;
+}
 export function logToOutputWindow(msg: string) {
     if (enableLogOutput) {
         if (!logOutputChannel) {
