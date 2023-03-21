@@ -7,8 +7,10 @@
 
 import * as vscode from 'vscode';
 import { DebugSessionStatus, DebugTracker, IDebuggerTrackerEvent, IDebugTracker, TRACKER_EXT_ID } from 'debug-tracker-vscode';
+import { logOutputChannel, logToOutputWindow } from './vscode-utils';
 
 export class DebugTrackerWrapper {
+    private isLocalTracker = false;
     public constructor(private debugType = '*') {
     }
 
@@ -26,6 +28,7 @@ export class DebugTrackerWrapper {
 
     private sessionIdMap: {[id: string]: vscode.DebugSession} = {};
     public async activate(context: vscode.ExtensionContext): Promise<void> {
+        logToOutputWindow('activating debug tracker');
         const debugtracker = await this.getTracker(context);
         if (debugtracker) {
             // Use shared debug tracker extension
@@ -34,6 +37,9 @@ export class DebugTrackerWrapper {
                 body: {
                     debuggers: '*',
                     handler: async (event: IDebuggerTrackerEvent) => {
+                        if (!this.isLocalTracker) {
+                            logToOutputWindow(JSON.stringify(event));
+                        }
                         const session = this.sessionIdMap[event.sessionId];
                         if (event.session && event.event === DebugSessionStatus.Initializing) {
                             // Session is passed in only when session is initializing, so we have to cache it, but wait
@@ -70,7 +76,11 @@ export class DebugTrackerWrapper {
 
         if (!ret) {
             // We could use our own channel in the future for debug
-            ret = new DebugTracker(context);
+            this.isLocalTracker = true;
+            logToOutputWindow('Using local debug tracker');
+            ret = new DebugTracker(context, logOutputChannel, 1);
+        } else {
+            logToOutputWindow('Using shared debug tracker');
         }
         return ret;
     }

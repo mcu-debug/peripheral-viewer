@@ -52,3 +52,18 @@ export const getSelection = async (title: string, items: QuickPickItem[], value?
         disposables.forEach(d => d.dispose());
     }
 };
+
+
+export let logOutputChannel: vscode.OutputChannel | undefined;
+// eslint-disable-next-line prefer-const
+export let enableLogOutput = false;     // TODO: This should be an extension option
+export function logToOutputWindow(msg: string) {
+    if (enableLogOutput) {
+        if (!logOutputChannel) {
+            logOutputChannel = vscode.window.createOutputChannel('Peripheral Viewer');
+        }
+        if (logOutputChannel) {
+            logOutputChannel.appendLine(msg);
+        }
+    }
+}

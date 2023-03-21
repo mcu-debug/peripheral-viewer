@@ -44,7 +44,7 @@ function isPreRelease() {
 }
 
 function vsceRun(pkgOnly) {
-    const args = ['npx', 'vsce', (pkgOnly ? 'package' : 'publish')];
+    const args = ['npx', 'vsce', (pkgOnly ? 'package' : 'publish'), '--yarn'];
     if (isPreRelease()) {
         args.push('--pre-release');
         if (vsxAlso) {
