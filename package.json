@@ -59,7 +59,7 @@
       "debug": [
         {
           "id": "mcu-debug.peripheral-viewer.svd",
-          "name": "XPeripherals",
+          "name": "Peripherals",
           "when": "mcu-debug.peripheral-viewer.hadData"
         }
       ]
