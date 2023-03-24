@@ -8,6 +8,9 @@
             "name": "Desktop Extension",
             "type": "extensionHost",
             "request": "launch",
+            "args": [
+                "--extensionDevelopmentPath=${workspaceFolder}"
+            ],
             "outFiles": [
                 "${workspaceFolder}/dist/**/*.js"
             ]
