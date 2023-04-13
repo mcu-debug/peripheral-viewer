@@ -10,7 +10,6 @@ import { SvdRegistry } from './svd-registry';
 import { parsePackString, pdscFromPack, fileFromPack, Pack } from './cmsis-pack/pack-utils';
 import { PDSC, Device, DeviceVariant, getDevices, getSvdPath, getProcessors } from './cmsis-pack/pdsc';
 import { readFromUrl } from './utils';
-import { getSelection } from './vscode-utils';
 
 export class SvdResolver {
     public constructor(protected registry: SvdRegistry) {
@@ -99,8 +98,7 @@ export class SvdResolver {
             packDevice = devices[0];
         } else {
             // Ask user which device to use
-            const items = [...deviceMap.keys()].map(label => ({ label }));
-            const selected = await getSelection('Select a device', items, deviceName);
+            const selected = await vscode.window.showQuickPick([...deviceMap.keys()], { title: 'Select a device', placeHolder: deviceName });
             if (!selected) {
                 return;
             }
@@ -124,10 +122,9 @@ export class SvdResolver {
             // Keep existing processor name
         } else if (!processorName && processors.length == 1) {
             processorName = processors[0];
-        } else {
+        } else if (processors.length > 1) {
             // Ask user which processor to use
-            const items = processors.map(label => ({ label }));
-            const selected = await getSelection('Select a processor', items, processorName);
+            const selected = await vscode.window.showQuickPick(processors, { title: 'Select a processor', placeHolder: processorName });
             if (!selected) {
                 return;
             }
