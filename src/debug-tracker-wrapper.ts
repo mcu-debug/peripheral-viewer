@@ -76,12 +76,17 @@ export class DebugTrackerWrapper {
     }
 
     private async getTracker(context: vscode.ExtensionContext): Promise<IDebugTracker | undefined> {
-        // If the extension was already installed and available, get the API handle from it, or
-        // else create one locally
         let ret: IDebugTracker | undefined;
-        const trackerExtension = vscode.extensions.getExtension<IDebugTracker>(TRACKER_EXT_ID);
-        if (trackerExtension) {
-            ret = await trackerExtension.activate();
+
+        try {
+            // If the extension was already installed and available, get the API handle from it, or
+            // else create one locally
+            const trackerExtension = vscode.extensions.getExtension<IDebugTracker>(TRACKER_EXT_ID);
+            if (trackerExtension) {
+                ret = await trackerExtension.activate();
+            }
+        } catch(_e) {
+            // Ignore error
         }
 
         if (!ret) {

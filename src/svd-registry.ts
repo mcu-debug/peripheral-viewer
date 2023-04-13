@@ -47,13 +47,17 @@ export class SvdRegistry {
     }
 
     public async getSVDFileFromCortexDebug(device: string): Promise<string | undefined> {
-        // Try loading from device support pack registered with this extension
-        const cortexDebug = vscode.extensions.getExtension<SvdRegistry>(CORTEX_EXTENSION);
-        if (cortexDebug) {
-            const cdbg = await cortexDebug.activate();
-            if (cdbg) {
-                return cdbg.getSVDFile(device);
+        try {
+            // Try loading from device support pack registered with this extension
+            const cortexDebug = vscode.extensions.getExtension<SvdRegistry>(CORTEX_EXTENSION);
+            if (cortexDebug) {
+                const cdbg = await cortexDebug.activate();
+                if (cdbg) {
+                    return cdbg.getSVDFile(device);
+                }
             }
+        } catch(_e) {
+            // Ignore error
         }
 
         return undefined;
