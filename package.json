@@ -281,6 +281,11 @@
           "maximum": 2,
           "multipleOf": 1,
           "description": "Enable debug output in the OUTPUT Tab (Peripheral Viewer section). Some debug output may also be found in the `Mcu-debug Tracker` section which is controlled separately. Changing this value requires a Reload of the window"
+        },
+        "mcu-debug.peripheral-viewer.saveLayout": {
+          "type": "boolean",
+          "default": true,
+          "description": "Save layout of peripheral view between sessions"
         }
       }
     }
