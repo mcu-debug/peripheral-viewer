@@ -71,6 +71,20 @@ Once you have the SVD file, specify the location of it in your `launch.json` usi
 }
 ```
 
+### Extending MCU Peripheral Viewer
+
+It is possible to extend the MCU Peripheral Viewer with your VSCode extension and provide peripherals information to the MCU Peripheral Viewer without passing an SVD file. In this method, `peripherals` variable passed to the debug launch configuration in `launch.json` file.
+
+```json
+{
+    ...
+    "peripherals": "command:myExtension.command.to.get.peripherals"
+    ...
+}
+```
+
+The `peripherals` variable will define the source to load the peripherals information. Peripherals could be loaded from VSCode command which is defined after `command:` prefix in `peripherals` variable. For more details about the implementation, please check the [Extending MCU Peripheral Viewer](./docs/extending-peripheral-viewer.md) document.
+
 ## Settings
 
 All variable key names used to extract data from debug launch configurations can be modified. This allows variable name clashes to be avoided as well as the need to duplicate configuration entries.

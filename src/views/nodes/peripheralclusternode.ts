@@ -18,7 +18,7 @@
 
 import * as vscode from 'vscode';
 import { PeripheralBaseNode, ClusterOrRegisterBaseNode } from './basenode';
-import { PeripheralRegisterNode } from './peripheralregisternode';
+import { PeripheralRegisterNode, PeripheralRegisterOptions } from './peripheralregisternode';
 import { PeripheralNode } from './peripheralnode';
 import { AccessType } from '../../svd-parser';
 import { NodeSetting, NumberFormat } from '../../common';
@@ -33,6 +33,8 @@ export interface ClusterOptions {
     accessType?: AccessType;
     size?: number;
     resetValue?: number;
+    registers?: PeripheralRegisterOptions[];
+    clusters?: ClusterOptions[];
 }
 
 export type PeripheralOrClusterNode = PeripheralNode | PeripheralClusterNode;
@@ -57,6 +59,16 @@ export class PeripheralClusterNode extends ClusterOrRegisterBaseNode {
         this.resetValue = options.resetValue || parent.resetValue;
         this.children = [];
         this.parent.addChild(this);
+
+        options.clusters?.forEach((clusterOptions) => {
+            const cluster = new PeripheralClusterNode(this, clusterOptions);
+            this.addChild(cluster);
+        });
+
+        options.registers?.forEach((registerOptions) => {
+            const register = new PeripheralRegisterNode(this, registerOptions);
+            this.addChild(register);
+        });
     }
 
     public getTreeItem(): vscode.TreeItem | Promise<vscode.TreeItem> {
