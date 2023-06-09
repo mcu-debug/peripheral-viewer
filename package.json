@@ -24,7 +24,9 @@
     "build": "webpack --mode production && yarn lint",
     "watch": "webpack -w",
     "lint": "eslint . --ext .ts,.tsx",
-    "package": "vsce package --yarn",
+    "package_old": "vsce package --yarn",
+    "package": "node ./release.js --package",
+    "publish": "node ./release.js --publish --vsx-also",
     "browser": "vscode-test-web --extensionDevelopmentPath=.",
     "serve": "serve --cors -p 9000"
   },
