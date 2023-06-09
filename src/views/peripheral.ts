@@ -68,7 +68,7 @@ export class PeripheralTreeForSession extends PeripheralBaseNode {
     }
 
     private async loadSvdState(context: vscode.ExtensionContext): Promise<NodeSetting[]> {
-        const saveLayout = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<boolean>(manifest.CONFIG_SAVE_LAYOUT);
+        const saveLayout = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<boolean>(manifest.CONFIG_SAVE_LAYOUT, true);
         if (!saveLayout) {
             return [];
         }
@@ -79,7 +79,7 @@ export class PeripheralTreeForSession extends PeripheralBaseNode {
     }
 
     private async saveSvdState(state: NodeSetting[], context: vscode.ExtensionContext): Promise<void> {
-        const saveLayout = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<boolean>(manifest.CONFIG_SAVE_LAYOUT);
+        const saveLayout = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<boolean>(manifest.CONFIG_SAVE_LAYOUT, true);
         if (saveLayout && this.session) {
             const propName = PeripheralTreeForSession.getStatePropName(this.session);
             context.workspaceState.update(propName, state);
