@@ -35,7 +35,7 @@ export class PeripheralsProvider {
         const getPeripheralsCacheKey = this.session.configuration[getPeripheralsCacheKeyConfig];
 
         if(getPeripheralsCacheKey) {
-            return getData(getPeripheralsCacheKey, this.session);
+            return getPeripheralsCacheKey;
         }
 
         const wsFolderPath = this.session.workspaceFolder ? this.session.workspaceFolder.uri : vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders[0].uri;

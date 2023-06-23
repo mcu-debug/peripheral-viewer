@@ -69,15 +69,13 @@ export class PeripheralNode extends PeripheralBaseNode {
         this.children = [];
         this.addrRanges = [];
 
-        options.clusters?.forEach((clusterOptions) => {
-            const cluster = new PeripheralClusterNode(this, clusterOptions);
-            this.addChild(cluster);
-        });
+        for(const cluster of options.clusters || []) {
+            this.addChild(new PeripheralClusterNode(this, cluster));
+        }
 
-        options.registers?.forEach((registerOptions) => {
-            const register = new PeripheralRegisterNode(this, registerOptions);
-            this.addChild(register);
-        });
+        for(const register of options.registers || []) {
+            this.addChild(new PeripheralRegisterNode(this, register));
+        }
     }
 
     public getPeripheral(): PeripheralBaseNode {

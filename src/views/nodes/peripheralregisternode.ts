@@ -73,9 +73,9 @@ export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
         this.children = [];
         this.parent.addChild(this);
 
-        options.fields?.forEach((fieldOptions) => {
-            this.addChild(new PeripheralFieldNode(this, fieldOptions));
-        });
+        for(const field of options.fields || []) {
+            this.addChild(new PeripheralFieldNode(this, field));
+        }
     }
 
     public reset(): void {
