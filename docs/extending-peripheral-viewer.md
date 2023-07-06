@@ -44,7 +44,7 @@ import {
 	ClusterOptions, 
 	FieldOptions, 
 	AccessType 
-} from "peripheral-viewer";
+} from "peripheral-viewer/src/types";
 export async function activate(context: ExtensionContext) {
 	...
 	commands.registerCommand(

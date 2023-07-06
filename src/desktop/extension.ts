@@ -8,7 +8,7 @@ import { Commands } from '../commands';
 import { DebugTrackerWrapper } from '../debug-tracker-wrapper';
 import { SvdRegistry } from '../svd-registry';
 import { logToOutputWindow } from '../vscode-utils';
-export * from '../export';
+export * from '../types';
 
 export const activate = async (context: vscode.ExtensionContext): Promise<SvdRegistry> => {
     logToOutputWindow('Activating desktop version');

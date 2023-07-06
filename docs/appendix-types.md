@@ -9,7 +9,7 @@ import {
 	PeripheralRegisterOptions, 
 	ClusterOptions, 
 	FieldOptions
-} from "peripheral-viewer";
+} from "peripheral-viewer/src/types";
 ```
 
 ## Enum: AccessType
