@@ -265,7 +265,7 @@
         },
         "mcu-debug.peripheral-viewer.packAssetUrl": {
           "type": "string",
-          "default": "https://pack-asset-service.keil.arm.com",
+          "default": "https://pack-content.cmsis.io",
           "description": "Base URL for CMSIS pack assets"
         },
         "mcu-debug.peripheral-viewer.svdAddrGapThreshold": {
