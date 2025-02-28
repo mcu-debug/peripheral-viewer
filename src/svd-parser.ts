@@ -349,6 +349,8 @@ export class SVDParser {
                     registers.push(register);
                 }
             } else {
+                if (!r.addressOffset)
+                    throw new Error(`Unable to parse SVD file: register ${r.name[0]} has no addressOffset`);
                 const description = this.cleanupDescription(r.description ? r.description[0] : '');
                 const register = new PeripheralRegisterNode(parent, {
                     ...baseOptions,
