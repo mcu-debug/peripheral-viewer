@@ -95,6 +95,9 @@ export class SVDParser {
             defaultOptions.accessType = accessTypeFromString(svdData.device.access[0]);
         }
 
+        if (!svdData.device.peripherals) {
+            throw new Error('Unable to parse SVD file: no peripherals defined');
+        }
         svdData.device.peripherals[0].peripheral.forEach((element) => {
             const name = element.name[0];
             peripheralMap[name] = element;
