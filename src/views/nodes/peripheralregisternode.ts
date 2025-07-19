@@ -20,7 +20,7 @@ import * as vscode from 'vscode';
 import { PeripheralNode } from './peripheralnode';
 import { PeripheralClusterNode } from './peripheralclusternode';
 import { ClusterOrRegisterBaseNode, PeripheralBaseNode } from './basenode';
-import { EnumerationMap, PeripheralFieldNode } from './peripheralfieldnode';
+import { EnumerationMap, FieldOptions, PeripheralFieldNode } from './peripheralfieldnode';
 import { extractBits, createMask, hexFormat, binaryFormat } from '../../utils';
 import { NumberFormat, NodeSetting } from '../../common';
 import { AccessType } from '../../svd-parser';
@@ -34,6 +34,8 @@ export interface PeripheralRegisterOptions {
     accessType?: AccessType;
     size?: number;
     resetValue?: number;
+
+    fields?: FieldOptions[];
 }
 
 export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
@@ -70,6 +72,10 @@ export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
         this.hexRegex = new RegExp(`^0x[0-9a-f]{1,${this.hexLength}}$`, 'i');
         this.children = [];
         this.parent.addChild(this);
+
+        for(const field of options.fields || []) {
+            this.addChild(new PeripheralFieldNode(this, field));
+        }
     }
 
     public reset(): void {

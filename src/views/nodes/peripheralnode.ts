@@ -18,8 +18,8 @@
 
 import * as vscode from 'vscode';
 import { PeripheralBaseNode } from './basenode';
-import { PeripheralRegisterNode } from './peripheralregisternode';
-import { PeripheralClusterNode, PeripheralRegisterOrClusterNode } from './peripheralclusternode';
+import { PeripheralRegisterNode, PeripheralRegisterOptions } from './peripheralregisternode';
+import { ClusterOptions, PeripheralClusterNode, PeripheralRegisterOrClusterNode } from './peripheralclusternode';
 import { AddrRange, AddressRangesUtils } from '../../addrranges';
 import { NumberFormat, NodeSetting } from '../../common';
 import { MemUtils } from '../../memreadutils';
@@ -36,6 +36,9 @@ export interface PeripheralOptions {
     accessType?: AccessType;
     size?: number;
     resetValue?: number;
+
+    registers?: PeripheralRegisterOptions[];
+    clusters?: ClusterOptions[];
 }
 
 export class PeripheralNode extends PeripheralBaseNode {
@@ -65,6 +68,14 @@ export class PeripheralNode extends PeripheralBaseNode {
         this.size = options.size || 32;
         this.children = [];
         this.addrRanges = [];
+
+        for(const cluster of options.clusters || []) {
+            this.addChild(new PeripheralClusterNode(this, cluster));
+        }
+
+        for(const register of options.registers || []) {
+            this.addChild(new PeripheralRegisterNode(this, register));
+        }
     }
 
     public getPeripheral(): PeripheralBaseNode {
