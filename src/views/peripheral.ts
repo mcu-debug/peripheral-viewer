@@ -388,7 +388,7 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
         this.sessionPeripheralsMap.set(session.id, regs);
         let thresh = session.configuration[manifest.CONFIG_ADDRGAP];
 
-        if (!thresh) {
+        if (thresh === undefined) {
             thresh = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<number>(manifest.CONFIG_ADDRGAP) || manifest.DEFAULT_ADDRGAP;
         }
 
