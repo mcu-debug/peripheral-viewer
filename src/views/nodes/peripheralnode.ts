@@ -46,7 +46,7 @@ export class PeripheralNode extends PeripheralBaseNode {
     public readonly description: string;
     public readonly groupName: string;
     public readonly totalLength: number;
-    public readonly accessType = AccessType.ReadOnly;
+    public readonly accessType: AccessType;
     public readonly size: number;
     public readonly resetValue: number;
     protected addrRanges: AddrRange[];
@@ -62,6 +62,7 @@ export class PeripheralNode extends PeripheralBaseNode {
         this.description = options.description;
         this.groupName = options.groupName || '';
         this.resetValue = options.resetValue || 0;
+        this.accessType = options.accessType || AccessType.ReadWrite;
         this.size = options.size || 32;
         this.children = [];
         this.addrRanges = [];
