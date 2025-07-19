@@ -85,10 +85,15 @@ export function parseDimIndex(spec: string, count: number): string[] {
         const start = parts[0];
         const end = parts[1];
 
-        if (!start || !end) {
-            return [];
-        }
-
+	if (start === undefined || end === undefined) {
+    	  return [];
+	}
+	if ( start < 0 || end < 0 || end < start ) {
+	  throw new Error('dimIndex Element Range Spec invalid.');
+	}
+/*
+if (!start || !end) { return []; }
+*/
         const numElements = end - start + 1;
         if (numElements < count) {
             throw new Error('dimIndex Element has invalid specification.');
