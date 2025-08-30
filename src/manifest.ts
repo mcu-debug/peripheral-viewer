@@ -15,3 +15,7 @@ export const CONFIG_ASSET_PATH = 'packAssetUrl';
 export const DEFAULT_ASSET_PATH = 'https://pack-content.cmsis.io';
 export const CONFIG_SAVE_LAYOUT = 'saveLayout';
 export const DEBUG_LEVEL = 'debugLevel';
+export const CONFIG_PERIPHERALS = 'peripheralsConfig';
+export const DEFAULT_PERIPHERALS = 'peripherals';
+export const CONFIG_PERIPHERALS_CACHE_KEY = 'peripheralsCacheKeyConfig';
+export const DEFAULT_PERIPHERALS_CACHE_KEY = 'peripheralsCacheKey';
