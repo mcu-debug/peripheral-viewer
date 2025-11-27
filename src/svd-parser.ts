@@ -473,12 +473,16 @@ export class SVDParser {
             name: p.name[0],
             baseAddress: parseInteger(p.baseAddress ? p.baseAddress[0] : '0'),
             description: this.cleanupDescription(p.description ? p.description[0] : ''),
-            totalLength: totalLength
+            totalLength: totalLength,
+            // initialize from device-level defaults
+            accessType: _defaults.accessType,
+            size: _defaults.size,
+            resetValue: _defaults.resetValue
         };
 
         if (p.access) { options.accessType = accessTypeFromString(p.access[0]); }
-        if (p.size) { options.size = parseInteger(p.size[0]); }
-        if (p.resetValue) { options.resetValue = parseInteger(p.resetValue[0]); }
+        if (p.size) { options.size = parseInteger(p.size[0]) ?? options.size; }
+        if (p.resetValue) { options.resetValue = parseInteger(p.resetValue[0]) ?? options.resetValue; }
         if (p.groupName) { options.groupName = p.groupName[0]; }
 
         const peripheral = new PeripheralNode(this.gapThreshold, options);
