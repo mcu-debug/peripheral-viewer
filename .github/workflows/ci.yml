@@ -5,7 +5,7 @@ on:
     branches:
       - main
     tags:
-      - '*'
+      - "*"
   pull_request:
     branches:
       - main
@@ -26,9 +26,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{github.token}}
         run: |
-          yarn install --ignore-scripts
-          yarn build
-          yarn package
+          npm install --ignore-scripts
+          npm run build
+          npm run package
       - uses: actions/upload-artifact@v4
         with:
           name: vsix-package

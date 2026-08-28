@@ -15,8 +15,8 @@ const pathToUri = (path: string): vscode.Uri => {
     }
 };
 
-const getData = async <T>(definition: string, ...params: unknown[]) : Promise<T | undefined> => {
-    if(definition.startsWith('command:')) {
+const getData = async <T>(definition: string, ...params: unknown[]): Promise<T | undefined> => {
+    if (definition.startsWith('command:')) {
         const command = definition.substring('command:'.length);
         return vscode.commands.executeCommand(command, ...params) as Promise<T | undefined>;
     }
@@ -30,11 +30,11 @@ export class PeripheralsProvider {
         this.svdResolver = new SvdResolver(registry);
     }
 
-    public async cacheKey() : Promise<string | vscode.Uri | undefined> {
+    public async cacheKey(): Promise<string | vscode.Uri | undefined> {
         const getPeripheralsCacheKeyConfig = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<string>(manifest.CONFIG_PERIPHERALS_CACHE_KEY) || manifest.DEFAULT_PERIPHERALS_CACHE_KEY;
         const getPeripheralsCacheKey = this.session.configuration[getPeripheralsCacheKeyConfig];
 
-        if(getPeripheralsCacheKey) {
+        if (getPeripheralsCacheKey) {
             return getPeripheralsCacheKey;
         }
 
@@ -59,7 +59,7 @@ export class PeripheralsProvider {
             thresh = ((((typeof thresh) === 'number') ? Math.max(0, Math.min(thresh, 32)) : 16) + 7) & ~0x7;
         }
 
-        if(getPeripherals) {
+        if (getPeripherals) {
             return this.getPeripheralsDynamic(thresh, getPeripherals);
         } else {
             return this.getPeripheralsFromSVD(thresh);
@@ -68,10 +68,10 @@ export class PeripheralsProvider {
 
     private async getPeripheralsDynamic(thresh: number, command: string): Promise<PeripheralNode[] | undefined> {
         const poptions = await getData<PeripheralOptions[]>(command, this.session);
-        if(!poptions?.length) {
+        if (!poptions?.length) {
             return undefined;
         }
-        const peripherials  = poptions.map((options) => new PeripheralNode(thresh, options));
+        const peripherials = poptions.map((options) => new PeripheralNode(thresh, options));
         const enumTypeValuesMap = {};
         for (const p of peripherials) {
             p.resolveDeferedEnums(enumTypeValuesMap); // This can throw an exception
@@ -92,7 +92,7 @@ export class PeripheralsProvider {
         let svdData: SvdData | undefined;
 
         try {
-            let contents: ArrayBuffer | undefined;
+            let contents: ArrayBuffer | Uint8Array | undefined;
 
             if (svdPath.startsWith('http')) {
                 contents = await readFromUrl(svdPath);
@@ -106,7 +106,7 @@ export class PeripheralsProvider {
                 const xml = decoder.decode(contents);
                 svdData = await parseStringPromise(xml);
             }
-        } catch(e) {
+        } catch (e) {
             // eslint-disable-next-line no-console
             console.warn(e);
         }
@@ -118,7 +118,7 @@ export class PeripheralsProvider {
         try {
             const parser = new SVDParser();
             return parser.parseSVD(svdData, thresh);
-        } catch(e) {
+        } catch (e) {
             return undefined;
         }
     }

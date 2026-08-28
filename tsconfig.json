@@ -2,9 +2,11 @@
     "compilerOptions": {
         "target": "es6",
         "module": "commonjs",
+        "rootDir": "src",
         "outDir": "dist",
         "strict": true,
         "sourceMap": true,
+        "forceConsistentCasingInFileNames": true,
         "declaration": true,
         "lib": [
             "dom"
