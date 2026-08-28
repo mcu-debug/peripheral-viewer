@@ -33,7 +33,7 @@
   "dependencies": {
     "debug-tracker-vscode": "^0.0.15",
     "jszip": "^3.10.1",
-    "xml2js": "^0.4.23"
+    "xml2js": "^0.6.2"
   },
   "devDependencies": {
     "@types/node": "24.x",
@@ -42,8 +42,8 @@
     "@typescript-eslint/eslint-plugin": "^8.68.0",
     "@typescript-eslint/parser": "^8.68.0",
     "@vscode/debugprotocol": "^1.68.0",
-    "@vscode/test-web": "^0.0.24",
-    "@vscode/vsce": "^2.17.0",
+    "@vscode/test-web": "^0.0.81",
+    "@vscode/vsce": "^3.9.2",
     "buffer": "^6.0.3",
     "esbuild": "^0.25.0",
     "eslint": "^8.57.0",
