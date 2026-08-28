@@ -18,6 +18,7 @@ Type: Bug Report
 - OS and Version:
 - VS Code Version:
 - Extension Version:
+- Debugger and Debugger Version:
 - Target Device:
 - Other extensions you installed (and if the issue persists after disabling them):
 - A clear and concise description of what the bug is.
@@ -33,7 +34,6 @@ Steps to reproduce the behavior:
 <!-- A clear and concise description of what you expected to happen. -->
 
 **Code sample and logs**
-- Code sample
 - `launch.json`
 
 **Screenshots**
@@ -41,3 +41,5 @@ Steps to reproduce the behavior:
 
 **Additional context**
 <!-- Provide any other context about the problem. -->
+- Attach SVD file
+- Attach your debuggers Debug Console (verbose/debug mode) or log file
