@@ -8,6 +8,7 @@
         "sourceMap": true,
         "forceConsistentCasingInFileNames": true,
         "declaration": true,
+        "emitDeclarationOnly": true,
         "lib": [
             "dom"
         ]

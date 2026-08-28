@@ -21,7 +21,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v3
         with:
-          node-version: 14.x
+          node-version: 24.x
       - name: Build
         env:
           GITHUB_TOKEN: ${{github.token}}
@@ -62,7 +62,7 @@ jobs:
           path: artifacts
       - uses: actions/setup-node@v3
         with:
-          node-version: 14.x
+          node-version: 24.x
       - name: Publish
         run: |
           npx ovsx@0.8.0 publish -i artifacts/*/*.vsix -p ${{secrets.OPEN_VSX_TOKEN}}
@@ -80,7 +80,7 @@ jobs:
           path: artifacts
       - uses: actions/setup-node@v3
         with:
-          node-version: 14.x
+          node-version: 24.x
       - name: Publish
         run: |
           npx vsce publish -i artifacts/*/*.vsix -p ${{secrets.VS_MARKETPLACE_TOKEN}}
