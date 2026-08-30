@@ -21,12 +21,12 @@
   "scripts": {
     "prepare": "npm run build",
     "clean": "git clean -f -x ./node_modules ./dist",
-    "build": "node esbuild.js --production && tsc && npm run lint",
-    "watch": "node esbuild.js --watch",
+    "build": "node esbuild.mjs --production && tsc && npm run lint",
+    "watch": "node esbuild.mjs --watch",
     "lint": "eslint . --ext .ts,.tsx",
     "package_old": "vsce package",
-    "package": "node ./release.js --package",
-    "publish": "node ./release.js --publish --vsx-also",
+    "package": "node ./release.mjs --package",
+    "publish": "node ./release.mjs --publish --vsx-also",
     "browser": "vscode-test-web --extensionDevelopmentPath=.",
     "serve": "serve --cors -p 9000"
   },

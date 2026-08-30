@@ -1,7 +1,7 @@
+/* eslint-disable no-console */
 //@ts-check
-'use strict';
 
-const esbuild = require('esbuild');
+import * as esbuild from 'esbuild';
 
 const isWatch = process.argv.includes('--watch');
 const isProduction = process.argv.includes('--production');
