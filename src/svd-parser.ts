@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright 2017-2019 Marcel Ball
  * https://github.com/Marus/cortex-debug
  *
@@ -23,11 +23,19 @@ import { PeripheralClusterNode, PeripheralOrClusterNode } from './views/nodes/pe
 import { PeripheralFieldNode, EnumerationMap, EnumeratedValue } from './views/nodes/peripheralfieldnode';
 import { PeripheralNode } from './views/nodes/peripheralnode';
 import { parseInteger, parseDimIndex } from './utils';
+import * as manifest from './manifest';
 
 export enum AccessType {
     ReadOnly = 1,
     ReadWrite,
     WriteOnly
+}
+
+export enum ReadActionType {
+    Clear = 1,
+    Set = 2,
+    Modify = 3,
+    ModifyExternal = 4
 }
 
 const accessTypeFromString = (type: string): AccessType => {
@@ -45,6 +53,21 @@ const accessTypeFromString = (type: string): AccessType => {
             return AccessType.ReadOnly;
         }
     }
+};
+
+const readActionFromString = (type: string): ReadActionType | undefined => {
+    switch (type) {
+        case 'clear':
+            return ReadActionType.Clear;
+        case 'set':
+            return ReadActionType.Set;
+        case 'modify':
+            return ReadActionType.Modify;
+        case 'modifyExternal':
+            return ReadActionType.ModifyExternal;
+    }
+
+    return undefined;
 };
 
 export interface Peripheral {
@@ -67,10 +90,10 @@ export interface SvdData {
 export class SVDParser {
     private enumTypeValuesMap: { [key: string]: EnumerationMap } = {};
     private peripheralRegisterMap: { [key: string]: any } = {};
-    private gapThreshold = 16;
+    private gapThreshold = manifest.DEFAULT_ADDRGAP;           // Combine registers but no gaps allowed
 
     // eslint-disable-next-line @typescript-eslint/no-empty-function
-    constructor() {}
+    constructor() { }
 
     public async parseSVD(
         svdData: SvdData, gapThreshold: number): Promise<PeripheralNode[]> {
@@ -89,7 +112,7 @@ export class SVDParser {
             defaultOptions.resetValue = parseInteger(svdData.device.resetValue[0]) ?? 0;
         }
         if (svdData.device.size) {
-            defaultOptions.size = parseInteger(svdData.device.size[0]) ?? 0;
+            defaultOptions.size = parseInteger(svdData.device.size[0]) ?? 32;
         }
         if (svdData.device.access) {
             defaultOptions.accessType = accessTypeFromString(svdData.device.access[0]);
@@ -226,6 +249,9 @@ export class SVDParser {
             if (f.access) {
                 baseOptions.accessType = accessTypeFromString(f.access[0]);
             }
+            if (f.readAction) {
+                baseOptions.readAction = readActionFromString(f.readAction[0]);
+            }
 
             if (f.dim) {
                 const count = parseInteger(f.dim[0]);
@@ -301,10 +327,13 @@ export class SVDParser {
                 baseOptions.accessType = accessTypeFromString(r.access[0]);
             }
             if (r.size) {
-                baseOptions.size = parseInteger(r.size[0]) ?? 0;
+                baseOptions.size = parseInteger(r.size[0]) ?? 32;
             }
             if (r.resetValue) {
                 baseOptions.resetValue = parseInteger(r.resetValue[0]) ?? 0;
+            }
+            if (r.readAction) {
+                baseOptions.readAction = readActionFromString(r.readAction[0]);
             }
 
             if (r.dim) {
@@ -383,7 +412,7 @@ export class SVDParser {
 
         if (!clusterInfo) { return []; }
 
-        clusterInfo.forEach((c:any) => {
+        clusterInfo.forEach((c: any) => {
             const baseOptions: any = {};
             if (c.access) {
                 baseOptions.accessType = accessTypeFromString(c.access[0]);

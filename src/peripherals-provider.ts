@@ -10,7 +10,7 @@ import { SvdRegistry } from './svd-registry';
 const pathToUri = (path: string): vscode.Uri => {
     try {
         return vscode.Uri.file(path);
-    } catch (e) {
+    } catch {
         return vscode.Uri.parse(path);
     }
 };
@@ -22,6 +22,33 @@ const getData = async <T>(definition: string, ...params: unknown[]): Promise<T |
     }
     return definition as T;
 };
+
+export function setGlobalSettings(session: vscode.DebugSession) {
+    let thresh = session.configuration[manifest.CONFIG_ADDRGAP];
+    if (!thresh) {
+        thresh = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<number>(manifest.CONFIG_ADDRGAP) ?? manifest.DEFAULT_ADDRGAP;
+    }
+
+    if (((typeof thresh) === 'number') && (thresh < 0)) {
+        thresh = -1;     // Never merge register reads even if adjacent
+    } else {
+        // Set the threshold between 0 and 32, with a default of 16 and a multiple of 8
+        thresh = ((((typeof thresh) === 'number') ? Math.max(0, Math.min(thresh, 32)) : manifest.DEFAULT_ADDRGAP) + 7) & ~0x7;
+    }
+
+    let maxReadSize = session.configuration[manifest.CONFIG_MAX_READ_SIZE];
+    if (!maxReadSize) {
+        maxReadSize = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<number>(manifest.CONFIG_MAX_READ_SIZE) ?? manifest.MAX_READ_SIZE;
+    }
+
+    let alignment = session.configuration[manifest.CONFIG_ALIGNMENT];
+    if (!alignment) {
+        alignment = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<number>(manifest.CONFIG_ALIGNMENT) ?? manifest.ALIGNMENT;
+    }
+    manifest.setMaxReadSize(maxReadSize);
+    manifest.setAlignment(alignment);
+    manifest.setAddrGapThreshold(thresh);
+}
 
 export class PeripheralsProvider {
     readonly svdResolver: SvdResolver;
@@ -47,31 +74,22 @@ export class PeripheralsProvider {
         const getPeripheralsConfig = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<string>(manifest.CONFIG_PERIPHERALS) || manifest.DEFAULT_PERIPHERALS;
         const getPeripherals = this.session.configuration[getPeripheralsConfig];
 
-        let thresh = this.session.configuration[manifest.CONFIG_ADDRGAP];
-        if (!thresh) {
-            thresh = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<number>(manifest.CONFIG_ADDRGAP) || manifest.DEFAULT_ADDRGAP;
-        }
-
-        if (((typeof thresh) === 'number') && (thresh < 0)) {
-            thresh = -1;     // Never merge register reads even if adjacent
-        } else {
-            // Set the threshold between 0 and 32, with a default of 16 and a mukltiple of 8
-            thresh = ((((typeof thresh) === 'number') ? Math.max(0, Math.min(thresh, 32)) : 16) + 7) & ~0x7;
-        }
+        // Resynchronize global settings with the current session
+        setGlobalSettings(this.session);
 
         if (getPeripherals) {
-            return this.getPeripheralsDynamic(thresh, getPeripherals);
+            return this.getPeripheralsDynamic(getPeripherals);
         } else {
-            return this.getPeripheralsFromSVD(thresh);
+            return this.getPeripheralsFromSVD();
         }
     }
 
-    private async getPeripheralsDynamic(thresh: number, command: string): Promise<PeripheralNode[] | undefined> {
+    private async getPeripheralsDynamic(command: string): Promise<PeripheralNode[] | undefined> {
         const poptions = await getData<PeripheralOptions[]>(command, this.session);
         if (!poptions?.length) {
             return undefined;
         }
-        const peripherials = poptions.map((options) => new PeripheralNode(thresh, options));
+        const peripherials = poptions.map((options) => new PeripheralNode(manifest.ADDRGAP_THRESHOLD, options));
         const enumTypeValuesMap = {};
         for (const p of peripherials) {
             p.resolveDeferedEnums(enumTypeValuesMap); // This can throw an exception
@@ -80,7 +98,7 @@ export class PeripheralsProvider {
         return peripherials;
     }
 
-    private async getPeripheralsFromSVD(thresh: number): Promise<PeripheralNode[] | undefined> {
+    private async getPeripheralsFromSVD(): Promise<PeripheralNode[] | undefined> {
         const wsFolderPath = this.session.workspaceFolder ? this.session.workspaceFolder.uri : vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders[0].uri;
 
         const svdPath = await this.svdResolver.resolve(this.session, wsFolderPath);
@@ -117,8 +135,8 @@ export class PeripheralsProvider {
 
         try {
             const parser = new SVDParser();
-            return parser.parseSVD(svdData, thresh);
-        } catch (e) {
+            return parser.parseSVD(svdData, manifest.ADDRGAP_THRESHOLD);
+        } catch {
             return undefined;
         }
     }

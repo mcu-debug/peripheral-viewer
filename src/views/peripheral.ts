@@ -36,7 +36,7 @@ interface CachedSVDFile {
 }
 
 export class PeripheralTreeForSession extends PeripheralBaseNode {
-    private static svdCache: {[path:string]: CachedSVDFile} = {};
+    private static svdCache: { [path: string]: CachedSVDFile } = {};
     public myTreeItem: vscode.TreeItem;
     private peripherials: PeripheralNode[] = [];
     private loaded = false;
@@ -78,14 +78,14 @@ export class PeripheralTreeForSession extends PeripheralBaseNode {
     public saveState(): NodeSetting[] {
         const state: NodeSetting[] = [];
         this.peripherials.forEach((p) => {
-            state.push(... p.saveState());
+            state.push(...p.saveState());
         });
 
         return state;
     }
 
     private static async addToCache(cacheKey: string | vscode.Uri | undefined, peripherals: PeripheralNode[]) {
-        if(!cacheKey) {
+        if (!cacheKey) {
             return;
         }
         try {
@@ -114,7 +114,7 @@ export class PeripheralTreeForSession extends PeripheralBaseNode {
     }
 
     private static async getFromCache(cacheKey: string | vscode.Uri | undefined): Promise<PeripheralNode[] | undefined> {
-        if(!cacheKey) {
+        if (!cacheKey) {
             return undefined;
         }
         try {
@@ -139,7 +139,7 @@ export class PeripheralTreeForSession extends PeripheralBaseNode {
             return;
         }
         const peripherals = await provider.getPeripherals();
-        if(peripherals?.length) {
+        if (peripherals?.length) {
             this.peripherials = peripherals;
             this.loaded = true;
             await this.setSession(this.session);
@@ -225,7 +225,7 @@ export class PeripheralTreeForSession extends PeripheralBaseNode {
             });
             this.peripherials.sort(PeripheralNode.compare);
             // this.fireCb();
-        } catch(e) {
+        } catch (e) {
             this.errMessage = `Error occured on SVD viewer loading: ${(e as Error).message}`;
             vscode.window.showErrorMessage(this.errMessage);
             if (vscode.debug.activeDebugConsole) {
@@ -250,8 +250,8 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
     // tslint:disable-next-line:variable-name
     public _onDidChangeTreeData: vscode.EventEmitter<PeripheralBaseNode | undefined> = new vscode.EventEmitter<PeripheralBaseNode | undefined>();
     public readonly onDidChangeTreeData: vscode.Event<PeripheralBaseNode | undefined> = this._onDidChangeTreeData.event;
-    protected sessionPeripheralsMap = new Map <string, PeripheralTreeForSession>();
-    protected oldState = new Map <string, vscode.TreeItemCollapsibleState>();
+    protected sessionPeripheralsMap = new Map<string, PeripheralTreeForSession>();
+    protected oldState = new Map<string, vscode.TreeItemCollapsibleState>();
 
     constructor(tracker: DebugTrackerWrapper, protected context: vscode.ExtensionContext) {
         tracker.onWillStartSession(session => this.debugSessionStarted(session));
@@ -322,9 +322,7 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
         }
 
         const wsFolderPath = session.workspaceFolder ? session.workspaceFolder.uri : vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders[0].uri;
-
         const provider = new PeripheralsProvider(session, this.context);
-
         const cacheKey = await provider.cacheKey();
 
         if (!cacheKey) {

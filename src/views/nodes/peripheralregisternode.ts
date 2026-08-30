@@ -23,15 +23,16 @@ import { ClusterOrRegisterBaseNode, PeripheralBaseNode } from './basenode';
 import { EnumerationMap, FieldOptions, PeripheralFieldNode } from './peripheralfieldnode';
 import { extractBits, createMask, hexFormat, binaryFormat } from '../../utils';
 import { NumberFormat, NodeSetting } from '../../common';
-import { AccessType } from '../../svd-parser';
+import { AccessType, ReadActionType } from '../../svd-parser';
 import { AddrRange } from '../../addrranges';
-import { MemUtils } from '../../memreadutils';
+import { MemUtils } from '../../memutils';
 
 export interface PeripheralRegisterOptions {
     name: string;
     description?: string;
     addressOffset: number;
     accessType?: AccessType;
+    readAction?: ReadActionType;
     size?: number;
     resetValue?: number;
 
@@ -46,6 +47,7 @@ export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
     public readonly accessType: AccessType;
     public readonly size: number;
     public readonly resetValue: number;
+    public readonly readAction?: ReadActionType;
 
     private maxValue: number;
     private hexLength: number;
@@ -60,21 +62,22 @@ export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
         this.name = options.name;
         this.description = options.description;
         this.offset = options.addressOffset;
-        this.accessType = options.accessType || parent.accessType;
+        this.accessType = options.accessType ?? parent.accessType;
         this.size = options.size || parent.size;
         this.resetValue = options.resetValue !== undefined ? options.resetValue : parent.resetValue;
         this.currentValue = this.resetValue;
+        this.readAction = options.readAction;
 
         this.hexLength = Math.ceil(this.size / 4);
 
-        this.maxValue = Math.pow(2, this.size);
+        this.maxValue = Math.pow(2, this.size);     // 64-bit incompatible
         this.binaryRegex = new RegExp(`^0b[01]{1,${this.size}}$`, 'i');
         this.hexRegex = new RegExp(`^0x[0-9a-f]{1,${this.hexLength}}$`, 'i');
         this.children = [];
         this.parent.addChild(this);
 
-        for(const field of options.fields || []) {
-            this.addChild(new PeripheralFieldNode(this, field));
+        for (const field of options.fields || []) {
+            new PeripheralFieldNode(this, field);
         }
     }
 
@@ -125,17 +128,17 @@ export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
         const mds = new vscode.MarkdownString('', true);
         mds.isTrusted = true;
 
-        const address = `${ hexFormat(this.getAddress()) }`;
+        const address = `${hexFormat(this.getAddress())}`;
 
         const formattedValue = this.getFormattedValue(this.getFormat());
 
         const roLabel = this.accessType === AccessType.ReadOnly ? '(Read Only)' : '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
 
-        mds.appendMarkdown(`| ${ this.name }@${ address } | ${ roLabel } | *${ formattedValue }* |\n`);
+        mds.appendMarkdown(`| ${this.name}@${address} | ${roLabel} | *${formattedValue}* |\n`);
         mds.appendMarkdown('|:---|:---:|---:|\n\n');
 
         if (this.accessType !== AccessType.WriteOnly) {
-            mds.appendMarkdown(`**Reset Value:** ${ this.getFormattedResetValue(this.getFormat()) }\n`);
+            mds.appendMarkdown(`**Reset Value:** ${this.getFormattedResetValue(this.getFormat())}\n`);
         }
 
         mds.appendMarkdown('\n____\n\n');
@@ -156,7 +159,7 @@ export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
 
         mds.appendMarkdown('| Hex &nbsp;&nbsp; | Decimal &nbsp;&nbsp; | Binary &nbsp;&nbsp; |\n');
         mds.appendMarkdown('|:---|:---|:---|\n');
-        mds.appendMarkdown(`| ${ hex } &nbsp;&nbsp; | ${ decimal } &nbsp;&nbsp; | ${ binary } &nbsp;&nbsp; |\n\n`);
+        mds.appendMarkdown(`| ${hex} &nbsp;&nbsp; | ${decimal} &nbsp;&nbsp; | ${binary} &nbsp;&nbsp; |\n\n`);
 
         const children = this.getChildren();
         if (children.length === 0) { return mds; }
@@ -166,8 +169,8 @@ export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
         mds.appendMarkdown('|:---|:---:|:---|:---|\n');
 
         children.forEach((field) => {
-            mds.appendMarkdown(`| ${ field.name } | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | ${ field.getFormattedRange() } | `
-                + `${ field.getFormattedValue(field.getFormat(), true) } |\n`);
+            mds.appendMarkdown(`| ${field.name} | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | ${field.getFormattedRange()} | `
+                + `${field.getFormattedValue(field.getFormat(), true)} |\n`);
         });
 
         return mds;
@@ -325,6 +328,32 @@ export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
     }
 
     public collectRanges(addrs: AddrRange[]): void {
+        const trueParent = this.getPeripheral();        // Should get a PeripheralNode instance, but make sure it is actually one before using it as such
+        const peripheral = trueParent instanceof PeripheralNode ? trueParent as PeripheralNode : undefined;
+        // a read action modifies the content of a register during read (e.g. pop FIFO),
+        // see https://arm-software.github.io/CMSIS_5/SVD/html/elem_registers.html
+        const avoidRead = (accessType: AccessType, readAction: ReadActionType | undefined): boolean => {
+            if (readAction || accessType === AccessType.WriteOnly) {
+                if (peripheral && peripheral.gapThreshold && peripheral.gapThreshold > 0) {
+                    // Not only should we not read this register, we should also NOT combine non-adjacent ones, for the whole peripheral.
+                    // Adjacent ones are still okay to combine
+                    peripheral.gapThreshold = 0;
+                }
+                return true;
+            }
+            return false;
+        };
+        if (avoidRead(this.accessType, this.readAction)) {
+            return;
+        }
+
+        // If remaining bytes should be read, analyze via BitRange type
+        for (const child of this.children) {
+            if (avoidRead(child.accessType, child.readAction)) {
+                return;
+            }
+        }
+
         const finalOffset = this.parent.getOffset(this.offset);
         addrs.push(new AddrRange(finalOffset, this.size / 8));
     }

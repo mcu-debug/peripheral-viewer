@@ -22,10 +22,11 @@ import { PeripheralRegisterNode, PeripheralRegisterOptions } from './peripheralr
 import { ClusterOptions, PeripheralClusterNode, PeripheralRegisterOrClusterNode } from './peripheralclusternode';
 import { AddrRange, AddressRangesUtils } from '../../addrranges';
 import { NumberFormat, NodeSetting } from '../../common';
-import { MemUtils } from '../../memreadutils';
+import { MemUtils } from '../../memutils';
 import { AccessType } from '../../svd-parser';
 import { hexFormat } from '../../utils';
 import { EnumerationMap } from './peripheralfieldnode';
+import * as manifest from '../../manifest';
 
 export interface PeripheralOptions {
     name: string;
@@ -54,7 +55,7 @@ export class PeripheralNode extends PeripheralBaseNode {
     public readonly resetValue: number;
     protected addrRanges: AddrRange[];
 
-    private currentValue: number[] = [];
+    private currentValue: Uint8Array = new Uint8Array(0);
 
     constructor(public gapThreshold: number, options: PeripheralOptions) {
         super();
@@ -70,11 +71,11 @@ export class PeripheralNode extends PeripheralBaseNode {
         this.children = [];
         this.addrRanges = [];
 
-        for(const cluster of options.clusters || []) {
+        for (const cluster of options.clusters || []) {
             this.addChild(new PeripheralClusterNode(this, cluster));
         }
 
-        for(const register of options.registers || []) {
+        for (const register of options.registers || []) {
             this.addChild(new PeripheralRegisterNode(this, register));
         }
     }
@@ -115,7 +116,7 @@ export class PeripheralNode extends PeripheralBaseNode {
     public getBytes(offset: number, size: number): Uint8Array {
         try {
             return new Uint8Array(this.currentValue.slice(offset, offset + size));
-        } catch (e) {
+        } catch {
             return new Uint8Array(0);
         }
     }
@@ -158,7 +159,7 @@ export class PeripheralNode extends PeripheralBaseNode {
             const promises = this.children.map((r) => r.updateData());
             await Promise.all(promises);
             return true;
-        } catch (e) {
+        } catch {
             /* This should never happen */
             const str = `Internal error: Failed to update peripheral ${this.name} after memory reads`;
             if (vscode.debug.activeDebugConsole) {
@@ -170,8 +171,8 @@ export class PeripheralNode extends PeripheralBaseNode {
     }
 
     protected readMemory(): Promise<Error[]> | [] {
-        if (!this.currentValue) {
-            this.currentValue = new Array<number>(this.totalLength);
+        if (this.currentValue.length !== this.totalLength) {
+            this.currentValue = new Uint8Array(this.totalLength);
         }
 
         if (this.session) {
@@ -204,11 +205,23 @@ export class PeripheralNode extends PeripheralBaseNode {
             ranges = addresses;
         }
 
+        const align = manifest.ALIGNMENT;
+        if (align > 1) {
+            for (const r of addresses) {
+                const base = r.base;
+                const mod = base % align;
+                r.base = base - mod;
+                r.length += mod;
+                // The following may cause this range to overlap the next one, but ensures alignment
+                r.length = Math.ceil(r.length / align) * align;
+            }
+        }
+
         // OpenOCD has an issue where the max number of bytes readable are 8191 (instead of 8192)
         // which causes unaligned reads (via gdb) and silent failures. There is patch for this in OpenOCD
         // but in general, it is good to split the reads up. see http://openocd.zylin.com/#/c/5109/
         // Another benefit, we can minimize gdb timeouts
-        const maxBytes = (4 * 1024); // Should be a multiple of 4 to be safe for MMIO reads
+        const maxBytes = manifest.MAX_READ_SIZE;
         this.addrRanges = AddressRangesUtils.splitIntoChunks(ranges, maxBytes, this.name, this.totalLength);
     }
 
@@ -239,7 +252,7 @@ export class PeripheralNode extends PeripheralBaseNode {
         return results;
     }
 
-    public findByPath(path: string[]): PeripheralBaseNode | undefined{
+    public findByPath(path: string[]): PeripheralBaseNode | undefined {
         if (path.length === 0) {
             return this;
         } else {

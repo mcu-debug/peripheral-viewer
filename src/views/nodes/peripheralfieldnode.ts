@@ -19,7 +19,7 @@
 import * as vscode from 'vscode';
 import { PeripheralBaseNode } from './basenode';
 import { PeripheralRegisterNode } from './peripheralregisternode';
-import { AccessType } from '../../svd-parser';
+import { AccessType, ReadActionType } from '../../svd-parser';
 import { AddrRange } from '../../addrranges';
 import { NumberFormat, NodeSetting } from '../../common';
 import { parseInteger, binaryFormat, hexFormat } from '../../utils';
@@ -29,7 +29,7 @@ export interface EnumerationMap {
 }
 
 export class EnumeratedValue {
-    constructor(public name: string, public description: string, public value: number) {}
+    constructor(public name: string, public description: string, public value: number) { }
 }
 
 export interface FieldOptions {
@@ -40,6 +40,7 @@ export interface FieldOptions {
     enumeration?: EnumerationMap;
     derivedFrom?: string;           // Set this if unresolved
     accessType?: AccessType;
+    readAction?: ReadActionType;
 }
 
 export class PeripheralFieldNode extends PeripheralBaseNode {
@@ -49,6 +50,7 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
     public readonly offset: number;
     public readonly width: number;
     public readonly accessType: AccessType;
+    public readonly readAction?: ReadActionType;
 
     private enumeration: EnumerationMap | undefined;
     private enumerationValues: string[] = [];
@@ -63,6 +65,7 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
         this.description = options.description;
         this.offset = options.offset;
         this.width = options.width;
+        this.readAction = options.readAction;
 
         if (!options.accessType) {
             this.accessType = parent.accessType;
@@ -131,10 +134,10 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
         const mds = new vscode.MarkdownString('', true);
         mds.isTrusted = true;
 
-        const address = `${ hexFormat(this.parent.getAddress()) }${ this.getFormattedRange() }`;
+        const address = `${hexFormat(this.parent.getAddress())}${this.getFormattedRange()}`;
 
         if (isReserved) {
-            mds.appendMarkdown(`| ${ this.name }@${ address } | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | *Reserved* |\n`);
+            mds.appendMarkdown(`| ${this.name}@${address} | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | *Reserved* |\n`);
             mds.appendMarkdown('|:---|:---:|---:|');
             return mds;
         }
@@ -143,11 +146,11 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
 
         const roLabel = this.accessType === AccessType.ReadOnly ? '(Read Only)' : '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
 
-        mds.appendMarkdown(`| ${ this.name }@${ address } | ${ roLabel } | *${ formattedValue }* |\n`);
+        mds.appendMarkdown(`| ${this.name}@${address} | ${roLabel} | *${formattedValue}* |\n`);
         mds.appendMarkdown('|:---|:---:|---:|\n\n');
 
         if (this.accessType !== AccessType.WriteOnly) {
-            mds.appendMarkdown(`**Reset Value:** ${ this.formatValue(this.getResetValue(), this.getFormat()) }\n`);
+            mds.appendMarkdown(`**Reset Value:** ${this.formatValue(this.getResetValue(), this.getFormat())}\n`);
         }
 
         mds.appendMarkdown('\n____\n\n');
@@ -173,14 +176,14 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
                 ev = this.enumeration[value].name;
             }
 
-            mds.appendMarkdown(`| ${ ev } &nbsp;&nbsp; | ${ hex } &nbsp;&nbsp; | ${ decimal } &nbsp;&nbsp; | ${ binary } &nbsp;&nbsp; |\n\n`);
+            mds.appendMarkdown(`| ${ev} &nbsp;&nbsp; | ${hex} &nbsp;&nbsp; | ${decimal} &nbsp;&nbsp; | ${binary} &nbsp;&nbsp; |\n\n`);
             if (this.enumeration[value] && this.enumeration[value].description) {
                 mds.appendMarkdown(this.enumeration[value].description);
             }
         } else {
             mds.appendMarkdown('| Hex &nbsp;&nbsp; | Decimal &nbsp;&nbsp; | Binary &nbsp;&nbsp; |\n');
             mds.appendMarkdown('|:---|:---|:---|\n');
-            mds.appendMarkdown(`| ${ hex } &nbsp;&nbsp; | ${ decimal } &nbsp;&nbsp; | ${ binary } &nbsp;&nbsp; |\n`);
+            mds.appendMarkdown(`| ${hex} &nbsp;&nbsp; | ${decimal} &nbsp;&nbsp; | ${binary} &nbsp;&nbsp; |\n`);
         }
 
         return mds;
@@ -314,7 +317,7 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
 
     public saveState(path: string): NodeSetting[] {
         if (this.format !== NumberFormat.Auto) {
-            return [ { node: `${path}.${this.name}`, format: this.format }];
+            return [{ node: `${path}.${this.name}`, format: this.format }];
         } else {
             return [];
         }

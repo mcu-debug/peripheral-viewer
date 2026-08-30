@@ -29,6 +29,10 @@ export class AddrRange {
     public endAddr(): number {
         return this.nxtAddr() - 1;
     }
+
+    public dup(): AddrRange {
+        return new AddrRange(this.base, this.length);
+    }
 }
 
 export class AddressRangesUtils {

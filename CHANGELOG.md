@@ -1,7 +1,12 @@
 # Change Log
 
 ## [Unreleased]
+
+## [v1.6.2] - 2026-08-30
 - Fix peripheral inheriting size, accessType and resetValue from device
+- Set default gap threshold to 0, will still read multiple registers at a time but will not read over any gaps
+- Avoid reading registers that have side effects if they are marked as sych in the SVD file
+- Many internal changes - upgrading to TypeScript 6.0
 
 ## [v1.6.0] - 2025-08-30
 - PR[#11](https://github.com/mcu-debug/peripheral-viewer/issues/11): An alternative way to load peripherals information (see [extending-peripheral-viewer.md](https://github.com/mcu-debug/peripheral-viewer/blob/main/docs/extending-peripheral-viewer.md))

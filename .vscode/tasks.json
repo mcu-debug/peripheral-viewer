@@ -10,11 +10,11 @@
 			},
 			"problemMatcher": [],
 			"label": "npm: watch",
-			"detail": "webpack -w",
-            "runOptions": {
-                "runOn": "folderOpen",
+			"detail": "npm run watch",
+			"runOptions": {
+				"runOn": "folderOpen",
 				"instanceLimit": 1
-            }
+			}
 		}
 	]
 }

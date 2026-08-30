@@ -2,7 +2,7 @@
   "name": "peripheral-viewer",
   "displayName": "Peripheral Viewer",
   "description": "Standalone Peripheral(SVD) Viewer extension extracted from cortex-debug, now works with any debugger",
-  "version": "1.6.1",
+  "version": "1.6.2",
   "preview": true,
   "publisher": "mcu-debug",
   "author": "haneefdm & thegecko",
@@ -60,7 +60,8 @@
         {
           "id": "mcu-debug.peripheral-viewer.svd",
           "name": "XPeripherals",
-          "when": "mcu-debug.peripheral-viewer.hadData"
+          "when": "mcu-debug.peripheral-viewer.hadData",
+          "icon": ""
         }
       ]
     },
@@ -268,7 +269,7 @@
         },
         "mcu-debug.peripheral-viewer.svdAddrGapThreshold": {
           "type": "number",
-          "default": 16,
+          "default": 0,
           "multipleOf": 1,
           "minimum": -1,
           "maximum": 32,
@@ -281,6 +282,21 @@
           "maximum": 2,
           "multipleOf": 1,
           "description": "Enable debug output in the OUTPUT Tab (Peripheral Viewer section). Some debug output may also be found in the `Mcu-debug Tracker` section which is controlled separately. Changing this value requires a Reload of the window"
+        },
+        "mcu-debug.peripheral-viewer.maxReadSize": {
+          "type": "number",
+          "default": 1024,
+          "minimum": 4,
+          "multipleOf": 4,
+          "maximum": 4096,
+          "description": "Maximum number of bytes to read from the device in a single operation"
+        },
+        "mcu-debug.peripheral-viewer.alignment": {
+          "type": "number",
+          "default": 0,
+          "minimum": 0,
+          "multipleOf": 1,
+          "description": "Alignment requirement for reading from the device. 0 means no specific alignment is required."
         },
         "mcu-debug.peripheral-viewer.saveLayout": {
           "type": "boolean",

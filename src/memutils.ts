@@ -19,6 +19,7 @@
 import * as vscode from 'vscode';
 import type { DebugProtocol } from '@vscode/debugprotocol';
 import { AddrRange, AddressRangesUtils } from './addrranges';
+import * as manifest from './manifest';
 
 /** Has utility functions to read memory in chunks into a storage space */
 export class MemUtils {
@@ -31,7 +32,7 @@ export class MemUtils {
      * @param storeTo This is where read-results go. The first element represents item at `startAddr`
      */
     public static async readMemoryChunks(
-        session: vscode.DebugSession, startAddr: number, specs: AddrRange[], storeTo: number[]): Promise<Error[]>{
+        session: vscode.DebugSession, startAddr: number, specs: AddrRange[], storeTo: Uint8Array): Promise<Error[]> {
         const errors: Error[] = [];
         for (const spec of specs) {
             const memoryReference = '0x' + spec.base.toString(16);
@@ -55,57 +56,10 @@ export class MemUtils {
             }
         }
         return errors;
-
-        /*
-        const promises = specs.map(async r => {
-            try {
-                const memoryReference = '0x' + r.base.toString(16);
-                const request: DebugProtocol.ReadMemoryArguments = {
-                    memoryReference,
-                    count: r.length
-                };
-
-                const response: Partial<DebugProtocol.ReadMemoryResponse> = {};
-                response.body = await session.customRequest('readMemory', request);
-
-                if (response.body && response.body.data) {
-                    const bytes = Buffer.from(response.body.data, 'base64');
-                    let dst = r.base - startAddr;
-                    for (const byte of bytes) {
-                        storeTo[dst++] = byte;
-                    }
-                }
-
-                return true;
-            } catch(e) {
-                let dst = r.base - startAddr;
-                // tslint:disable-next-line: prefer-for-of
-                for (let ix = 0; ix < r.length; ix++) {
-                    storeTo[dst++] = 0xff;
-                }
-
-                throw (e);
-            }
-        });
-
-        const results = await Promise.all(promises.map((p) => p.catch((e) => e)));
-        const errs: string[] = [];
-        results.map((e) => {
-            if (e instanceof Error) {
-                errs.push(e.message);
-            }
-        });
-
-        if (errs.length !== 0) {
-            throw new Error(errs.join('\n'));
-        }
-
-        return true;
-        */
     }
 
-    public static readMemory(session: vscode.DebugSession, startAddr: number, length: number, storeTo: number[]): Promise<Error[]> {
-        const maxChunk = (4 * 1024);
+    public static readMemory(session: vscode.DebugSession, startAddr: number, length: number, storeTo: Uint8Array): Promise<Error[]> {
+        const maxChunk = manifest.MAX_READ_SIZE;
         const ranges = AddressRangesUtils.splitIntoChunks([new AddrRange(startAddr, length)], maxChunk);
         return MemUtils.readMemoryChunks(session, startAddr, ranges, storeTo);
     }
@@ -131,7 +85,7 @@ export class MemUtils {
 
         try {
             await session.customRequest('writeMemory', request);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (e: any) {
             vscode.window.showErrorMessage(`Failed to write @ ${memoryReference}: ${e.toString()}`);
             return false;
