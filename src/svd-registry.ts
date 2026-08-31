@@ -56,7 +56,7 @@ export class SvdRegistry {
                     return cdbg.getSVDFile(device);
                 }
             }
-        } catch(_e) {
+        } catch {
             // Ignore error
         }
 

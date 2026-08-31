@@ -3,5 +3,11 @@
         "CMSIS",
         "Haneef",
         "MMIO"
-    ]
+    ],
+    "files.watcherExclude": {
+        "**/.vscode-test-web/**": true
+    },
+    "files.exclude": {
+        "**/.vscode-test-web": true
+    }
 }
