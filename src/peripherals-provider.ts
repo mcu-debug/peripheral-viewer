@@ -23,31 +23,51 @@ const getData = async <T>(definition: string, ...params: unknown[]): Promise<T |
     return definition as T;
 };
 
-export function setGlobalSettings(session: vscode.DebugSession) {
-    let thresh = session.configuration[manifest.CONFIG_ADDRGAP];
-    if (!thresh) {
-        thresh = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<number>(manifest.CONFIG_ADDRGAP) ?? manifest.DEFAULT_ADDRGAP;
-    }
+/**
+ * We want to use all the fields that make this svd cache still valid, since some of the
+ * settings also affect what is in the cache.
+ */
+export interface CacheKey {
+    fileOrUri: string;
+    mtime: number;
+    gapThreshold: number;
+    maxReadSize: number;
+    alignment: number;
+}
 
-    if (((typeof thresh) === 'number') && (thresh < 0)) {
-        thresh = -1;     // Never merge register reads even if adjacent
-    } else {
-        // Set the threshold between 0 and 32, with a default of 16 and a multiple of 8
-        thresh = ((((typeof thresh) === 'number') ? Math.max(0, Math.min(thresh, 32)) : manifest.DEFAULT_ADDRGAP) + 7) & ~0x7;
+export async function createCacheKey(fileOrUri: string | vscode.Uri): Promise<CacheKey> {
+    const isString = typeof fileOrUri === 'string';
+    let mtime = 0;
+    try {
+        const uri = isString ? pathToUri(fileOrUri as string) : fileOrUri;
+        const stat = await vscode.workspace.fs.stat(uri);
+        mtime = stat ? stat.mtime : 0;
+    } catch {
+        // Ignore errors and use the provided mtime
     }
+    return {
+        fileOrUri: isString ? fileOrUri : fileOrUri.toString(),
+        mtime: mtime,
+        gapThreshold: manifest.ADDRGAP_THRESHOLD,
+        maxReadSize: manifest.MAX_READ_SIZE,
+        alignment: manifest.ALIGNMENT
+    };
+}
 
-    let maxReadSize = session.configuration[manifest.CONFIG_MAX_READ_SIZE];
-    if (!maxReadSize) {
-        maxReadSize = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<number>(manifest.CONFIG_MAX_READ_SIZE) ?? manifest.MAX_READ_SIZE;
-    }
+export async function createCacheKeyString(fileOrUri: string | vscode.Uri): Promise<string> {
+    const cacheKey = await createCacheKey(fileOrUri);
+    return JSON.stringify(cacheKey);
+}
 
-    let alignment = session.configuration[manifest.CONFIG_ALIGNMENT];
-    if (!alignment) {
-        alignment = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<number>(manifest.CONFIG_ALIGNMENT) ?? manifest.ALIGNMENT;
-    }
+export function setGlobalSettings() {
+    const thresh = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<number>(manifest.CONFIG_ADDRGAP) ?? manifest.DEFAULT_ADDRGAP;
+    const maxReadSize = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<number>(manifest.CONFIG_MAX_READ_SIZE) ?? manifest.DEFAULT_MAX_READ_SIZE;
+    const alignment = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<number>(manifest.CONFIG_ALIGNMENT) ?? manifest.DEFAULT_ALIGNMENT;
+    const dbgLevel = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<number>(manifest.CONFIG_DEBUG_LEVEL) ?? manifest.DEFAULT_DEBUG_LEVEL;
     manifest.setMaxReadSize(maxReadSize);
     manifest.setAlignment(alignment);
     manifest.setAddrGapThreshold(thresh);
+    manifest.setDebugLevel(dbgLevel);
 }
 
 export class PeripheralsProvider {
@@ -57,7 +77,7 @@ export class PeripheralsProvider {
         this.svdResolver = new SvdResolver(registry);
     }
 
-    public async cacheKey(): Promise<string | vscode.Uri | undefined> {
+    private async cacheKey(): Promise<string | vscode.Uri | undefined> {
         const getPeripheralsCacheKeyConfig = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<string>(manifest.CONFIG_PERIPHERALS_CACHE_KEY) || manifest.DEFAULT_PERIPHERALS_CACHE_KEY;
         const getPeripheralsCacheKey = this.session.configuration[getPeripheralsCacheKeyConfig];
 
@@ -70,12 +90,17 @@ export class PeripheralsProvider {
         return svdPath;
     }
 
+    public async cacheKeyString(): Promise<string | undefined> {
+        const key = await this.cacheKey();
+        if (!key) {
+            return undefined;
+        }
+        return createCacheKeyString(key);
+    }
+
     public async getPeripherals(): Promise<PeripheralNode[] | undefined> {
         const getPeripheralsConfig = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<string>(manifest.CONFIG_PERIPHERALS) || manifest.DEFAULT_PERIPHERALS;
         const getPeripherals = this.session.configuration[getPeripheralsConfig];
-
-        // Resynchronize global settings with the current session
-        setGlobalSettings(this.session);
 
         if (getPeripherals) {
             return this.getPeripheralsDynamic(getPeripherals);

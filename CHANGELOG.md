@@ -1,6 +1,10 @@
 # Change Log
 
 ## [Unreleased]
+## [v1.6.3] - 2026-09-01
+- Better logging for how addresses have been coalesced
+- Better caching of svdFile content based on settings and file modification time. Helps when you subsequent debug sessions
+
 
 ## [v1.6.2] - 2026-08-30
 - Fix peripheral inheriting size, accessType and resetValue from device

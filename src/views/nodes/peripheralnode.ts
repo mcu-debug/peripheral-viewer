@@ -27,6 +27,7 @@ import { AccessType } from '../../svd-parser';
 import { hexFormat } from '../../utils';
 import { EnumerationMap } from './peripheralfieldnode';
 import * as manifest from '../../manifest';
+import { logToOutputWindow } from '../../vscode-utils';
 
 export interface PeripheralOptions {
     name: string;
@@ -184,9 +185,15 @@ export class PeripheralNode extends PeripheralBaseNode {
 
     public collectRanges(): void {
         const addresses: AddrRange[] = [];
-        this.children.map((child) => child.collectRanges(addresses));
+        const blockedSet = new Set<number>();
+        this.children.forEach((child) => child.collectRanges(addresses, blockedSet));
         addresses.sort((a, b) => (a.base < b.base) ? -1 : ((a.base > b.base) ? 1 : 0));
-        addresses.map((r) => r.base += this.baseAddress);
+        addresses.forEach((r) => r.base += this.baseAddress);
+
+        // Will be a very small set, so no point of sorting
+        const blockedArray = Array.from(blockedSet).map((b) => b + this.baseAddress);
+        // Snapshot before alignment mutates the shared range objects
+        const origAddresses = manifest.DEBUG_LEVEL > 1 ? addresses.map((r) => r.dup()) : [];
 
         const maxGap = this.gapThreshold;
         let ranges: AddrRange[] = [];
@@ -195,7 +202,15 @@ export class PeripheralNode extends PeripheralBaseNode {
             for (const r of addresses) {
                 if (last && ((last.nxtAddr() + maxGap) >= r.base)) {
                     const max = Math.max(last.nxtAddr(), r.nxtAddr());
-                    last.length = max - last.base;
+                    const ix = blockedArray.findIndex((b) => b >= last!.base && b < max);
+                    if (ix >= 0) {
+                        // A blocked address will be in the middle of this range, if merged. Start a new range here.
+                        ranges.push(r);
+                        last = r;
+                    } else {
+                        // Extend the range of the last range to include the current one
+                        last.length = max - last.base;
+                    }
                 } else {
                     ranges.push(r);
                     last = r;
@@ -207,7 +222,7 @@ export class PeripheralNode extends PeripheralBaseNode {
 
         const align = manifest.ALIGNMENT;
         if (align > 1) {
-            for (const r of addresses) {
+            for (const r of ranges) {
                 const base = r.base;
                 const mod = base % align;
                 r.base = base - mod;
@@ -223,6 +238,14 @@ export class PeripheralNode extends PeripheralBaseNode {
         // Another benefit, we can minimize gdb timeouts
         const maxBytes = manifest.MAX_READ_SIZE;
         this.addrRanges = AddressRangesUtils.splitIntoChunks(ranges, maxBytes, this.name, this.totalLength);
+        if (this.gapThreshold > -1) {
+            logToOutputWindow(`${this.name}: Raw ranges = ${addresses.length}, Processed ranges = ${this.addrRanges.length}, Gap threshold = ${this.gapThreshold}`);
+            if (manifest.DEBUG_LEVEL > 1) {
+                const fmt = (r: AddrRange) => `${hexFormat(r.base)}/${r.length}`;
+                logToOutputWindow(`    Original :${origAddresses.map(fmt).join(' ')}`);
+                logToOutputWindow(`    Processed:${this.addrRanges.map(fmt).join(' ')}`);
+            }
+        }
     }
 
     public getPeripheralNode(): PeripheralNode {

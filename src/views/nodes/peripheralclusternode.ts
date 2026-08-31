@@ -60,11 +60,11 @@ export class PeripheralClusterNode extends ClusterOrRegisterBaseNode {
         this.children = [];
         this.parent.addChild(this);
 
-        for(const cluster of options.clusters || []) {
+        for (const cluster of options.clusters || []) {
             this.addChild(new PeripheralClusterNode(this, cluster));
         }
 
-        for(const register of options.registers || []) {
+        for (const register of options.registers || []) {
             this.addChild(new PeripheralRegisterNode(this, register));
         }
     }
@@ -151,8 +151,8 @@ export class PeripheralClusterNode extends ClusterOrRegisterBaseNode {
         }
     }
 
-    public collectRanges(ary: AddrRange[]): void {
-        this.children.map((r) => { r.collectRanges(ary); });
+    public collectRanges(ary: AddrRange[], blocked: Set<number>): void {
+        this.children.map((r) => { r.collectRanges(ary, blocked); });
     }
 
     public getPeripheral(): PeripheralBaseNode {

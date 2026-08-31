@@ -25,13 +25,12 @@ import { NodeSetting } from '../common';
 import { AddrRange } from '../addrranges';
 import { DebugTrackerWrapper } from '../debug-tracker-wrapper';
 import { PeripheralRegisterNode } from './nodes/peripheralregisternode';
-import { PeripheralsProvider } from '../peripherals-provider';
+import { PeripheralsProvider, setGlobalSettings } from '../peripherals-provider';
 
 const traceExec = false;
 
 interface CachedSVDFile {
     cacheKey: vscode.Uri | string;
-    mtime: number;
     peripherials: PeripheralNode[]
 }
 
@@ -84,36 +83,23 @@ export class PeripheralTreeForSession extends PeripheralBaseNode {
         return state;
     }
 
-    private static async addToCache(cacheKey: string | vscode.Uri | undefined, peripherals: PeripheralNode[]) {
+    private static addToCache(cacheKey: string | undefined, peripherals: PeripheralNode[]) {
         if (!cacheKey) {
             return;
         }
         try {
-            if (typeof cacheKey === 'string') {
-                const tmp: CachedSVDFile = {
-                    cacheKey: cacheKey,
-                    mtime: 0,
-                    peripherials: peripherals
-                };
-                PeripheralTreeForSession.svdCache[cacheKey.toString()] = tmp;
-            } else {
-                const stat = await vscode.workspace.fs.stat(cacheKey);
-                if (stat && stat.mtime) {
-                    const tmp: CachedSVDFile = {
-                        cacheKey: cacheKey,
-                        mtime: stat.mtime,
-                        peripherials: peripherals
-                    };
-                    PeripheralTreeForSession.svdCache[cacheKey.toString()] = tmp;
-                }
-            }
+            const tmp: CachedSVDFile = {
+                cacheKey: cacheKey,
+                peripherials: peripherals
+            };
+            PeripheralTreeForSession.svdCache[cacheKey.toString()] = tmp;
         } catch {
             delete PeripheralTreeForSession.svdCache[cacheKey.toString()];
             return;
         }
     }
 
-    private static async getFromCache(cacheKey: string | vscode.Uri | undefined): Promise<PeripheralNode[] | undefined> {
+    private static getFromCache(cacheKey: string | undefined): PeripheralNode[] | undefined {
         if (!cacheKey) {
             return undefined;
         }
@@ -129,8 +115,10 @@ export class PeripheralTreeForSession extends PeripheralBaseNode {
     }
 
     private async loadPeripherals(provider: PeripheralsProvider): Promise<void> {
-        const cacheKey = await provider.cacheKey();
-        const cached = await PeripheralTreeForSession.getFromCache(cacheKey);
+        // Resynchronize global settings with the current session
+        setGlobalSettings();        // Must call this before we create cache keys
+        const cacheKey = await provider.cacheKeyString();
+        const cached = PeripheralTreeForSession.getFromCache(cacheKey);
         if (cached) {
             this.peripherials = cached;
             this.loaded = true;
@@ -143,7 +131,7 @@ export class PeripheralTreeForSession extends PeripheralBaseNode {
             this.peripherials = peripherals;
             this.loaded = true;
             await this.setSession(this.session);
-            await PeripheralTreeForSession.addToCache(cacheKey, peripherals);
+            PeripheralTreeForSession.addToCache(cacheKey, peripherals);
             return;
         } else {
             this.peripherials = [];
@@ -323,7 +311,7 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
 
         const wsFolderPath = session.workspaceFolder ? session.workspaceFolder.uri : vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders[0].uri;
         const provider = new PeripheralsProvider(session, this.context);
-        const cacheKey = await provider.cacheKey();
+        const cacheKey = await provider.cacheKeyString();
 
         if (!cacheKey) {
             return;

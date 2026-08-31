@@ -26,6 +26,7 @@ import { NumberFormat, NodeSetting } from '../../common';
 import { AccessType, ReadActionType } from '../../svd-parser';
 import { AddrRange } from '../../addrranges';
 import { MemUtils } from '../../memutils';
+import { logToOutputWindow } from '../../vscode-utils';
 
 export interface PeripheralRegisterOptions {
     name: string;
@@ -327,17 +328,25 @@ export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
         return this.parent.getPeripheral();
     }
 
-    public collectRanges(addrs: AddrRange[]): void {
+    public collectRanges(addrs: AddrRange[], blocked: Set<number>): void {
+        const regOffset = this.parent.getOffset(this.offset);
         const trueParent = this.getPeripheral();        // Should get a PeripheralNode instance, but make sure it is actually one before using it as such
         const peripheral = trueParent instanceof PeripheralNode ? trueParent as PeripheralNode : undefined;
         // a read action modifies the content of a register during read (e.g. pop FIFO),
         // see https://arm-software.github.io/CMSIS_5/SVD/html/elem_registers.html
-        const avoidRead = (accessType: AccessType, readAction: ReadActionType | undefined): boolean => {
+        const avoidRead = (accessType: AccessType, readAction: ReadActionType | undefined, fieldName?: string): boolean => {
             if (readAction || accessType === AccessType.WriteOnly) {
                 if (peripheral && peripheral.gapThreshold && peripheral.gapThreshold > 0) {
+                    if (blocked) {
+                        blocked.add(regOffset);
+                    } else {
+                        logToOutputWindow(`Bug? Blocked set is not available for peripheral ${peripheral.name} when avoiding read for register ${this.name}.`);
+                    }
                     // Not only should we not read this register, we should also NOT combine non-adjacent ones, for the whole peripheral.
                     // Adjacent ones are still okay to combine
-                    peripheral.gapThreshold = 0;
+                    const pName = peripheral.name;
+                    const rName = this.name + (fieldName ? `.${fieldName}` : '');
+                    logToOutputWindow(`Peripheral ${pName} avoiding read due to register ${rName}. Will also break up memory reads at its address.`);
                 }
                 return true;
             }
@@ -354,8 +363,7 @@ export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
             }
         }
 
-        const finalOffset = this.parent.getOffset(this.offset);
-        addrs.push(new AddrRange(finalOffset, this.size / 8));
+        addrs.push(new AddrRange(regOffset, this.size / 8));
     }
 
     public resolveDeferedEnums(enumTypeValuesMap: { [key: string]: EnumerationMap; }) {

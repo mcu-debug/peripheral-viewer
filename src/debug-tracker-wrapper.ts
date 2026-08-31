@@ -8,7 +8,8 @@
 import * as vscode from 'vscode';
 import * as manifest from './manifest';
 import { DebugSessionStatus, DebugTracker, IDebuggerTrackerEvent, IDebugTracker, TRACKER_EXT_ID } from 'debug-tracker-vscode';
-import { setLogOutput, logOutputChannel, logToOutputWindow } from './vscode-utils';
+import { logOutputChannel, logToOutputWindow } from './vscode-utils';
+import { setDebugLevel } from './manifest';
 
 export class DebugTrackerWrapper {
     private isLocalTracker = false;
@@ -28,16 +29,14 @@ export class DebugTrackerWrapper {
     private _onDidContinueDebug: vscode.EventEmitter<vscode.DebugSession> = new vscode.EventEmitter<vscode.DebugSession>();
     public readonly onDidContinueDebug: vscode.Event<vscode.DebugSession> = this._onDidContinueDebug.event;
 
-    private sessionIdMap: {[id: string]: vscode.DebugSession} = {};
+    private sessionIdMap: { [id: string]: vscode.DebugSession } = {};
     public async activate(context: vscode.ExtensionContext): Promise<void> {
         // TODO: Make this dynamic so reloads are needed if setting changes
-        const dbgLevel = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<number>(manifest.DEBUG_LEVEL, 0);
+        const dbgLevel = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<number>(manifest.CONFIG_DEBUG_LEVEL, 0);
         if ((dbgLevel >= 0) && (dbgLevel <= 2)) {
             this.dbgLevel = dbgLevel as 0 | 1 | 2;
         }
-        if (this.dbgLevel > 0) {
-            setLogOutput(true);
-        }
+        setDebugLevel(this.dbgLevel);
         logToOutputWindow('activating debug tracker');
         const debugtracker = await this.getTracker(context);
         if (debugtracker) {
@@ -85,7 +84,7 @@ export class DebugTrackerWrapper {
             if (trackerExtension) {
                 ret = await trackerExtension.activate();
             }
-        } catch(_e) {
+        } catch {
             // Ignore error
         }
 
