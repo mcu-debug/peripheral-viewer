@@ -151,7 +151,7 @@ export class PeripheralClusterNode extends ClusterOrRegisterBaseNode {
         }
     }
 
-    public collectRanges(ary: AddrRange[], blocked: Set<number>): void {
+    public collectRanges(ary: AddrRange[], blocked: number[]): void {
         this.children.map((r) => { r.collectRanges(ary, blocked); });
     }
 

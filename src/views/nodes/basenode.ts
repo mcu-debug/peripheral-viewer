@@ -64,7 +64,7 @@ export abstract class PeripheralBaseNode extends BaseNode {
     public abstract getChildren(): PeripheralBaseNode[] | Promise<PeripheralBaseNode[]>;
     public abstract getPeripheral(): PeripheralBaseNode | undefined;
 
-    public abstract collectRanges(ary: AddrRange[], blocked: Set<number>): void;      // Append addr range(s) to array
+    public abstract collectRanges(ary: AddrRange[], blocked: number[]): void;      // Append addr range(s) to array
 
     public abstract saveState(path?: string): NodeSetting[];
     public abstract findByPath(path: string[]): PeripheralBaseNode | undefined;

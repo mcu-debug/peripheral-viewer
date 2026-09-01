@@ -32,8 +32,9 @@ export class MemUtils {
      * @param storeTo This is where read-results go. The first element represents item at `startAddr`
      */
     public static async readMemoryChunks(
-        session: vscode.DebugSession, startAddr: number, specs: AddrRange[], storeTo: Uint8Array): Promise<Error[]> {
+        session: vscode.DebugSession, startAddr: number, specs: AddrRange[], storeTo: Uint8Array, name?: string): Promise<Error[]> {
         const errors: Error[] = [];
+        name = name || 'this memory chunk';
         for (const spec of specs) {
             const memoryReference = '0x' + spec.base.toString(16);
             const request: DebugProtocol.ReadMemoryArguments = {
@@ -49,19 +50,27 @@ export class MemUtils {
                     for (const byte of bytes) {
                         storeTo[dst++] = byte;
                     }
+                } else {
+                    errors.push(new Error(`peripheral-viewer: readMemory failed @ ${memoryReference} for ${request.count} bytes: No data returned, block=${name}`));
                 }
             } catch (e: unknown) {
                 const err = e ? e.toString() : 'Unknown error';
-                errors.push(new Error(`peripheral-viewer: readMemory failed @ ${memoryReference} for ${request.count} bytes: ${err}, session=${session.id}`));
+                errors.push(new Error(`${manifest.PACKAGE_NAME}: readMemory failed @ ${memoryReference} for ${request.count} bytes: ${err}, block=${name}`));
+                if ((typeof e === 'object' && e !== null) && 'message' in e && (typeof e.message === 'string')) {
+                    if (['notstopped', 'busy'].includes((e as Error).message.toLowerCase())) {
+                        errors.push(new Error(`${manifest.PACKAGE_NAME}: responded with notstopped or busy error, ignoring, Aborting read for ${name}`));
+                        break;
+                    }
+                }
             }
         }
         return errors;
     }
 
-    public static readMemory(session: vscode.DebugSession, startAddr: number, length: number, storeTo: Uint8Array): Promise<Error[]> {
+    public static readMemory(session: vscode.DebugSession, startAddr: number, length: number, storeTo: Uint8Array, name?: string): Promise<Error[]> {
         const maxChunk = manifest.MAX_READ_SIZE;
         const ranges = AddressRangesUtils.splitIntoChunks([new AddrRange(startAddr, length)], maxChunk);
-        return MemUtils.readMemoryChunks(session, startAddr, ranges, storeTo);
+        return MemUtils.readMemoryChunks(session, startAddr, ranges, storeTo, name);
     }
 
     public static async writeMemory(session: vscode.DebugSession, startAddr: number, value: number, length: number): Promise<boolean> {

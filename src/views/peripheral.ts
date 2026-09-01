@@ -155,7 +155,7 @@ export class PeripheralTreeForSession extends PeripheralBaseNode {
         throw new Error('Method not implemented.');
     }
 
-    public collectRanges(_ary: AddrRange[]): void {
+    public collectRanges(_ary: AddrRange[], _blocked: number[]): void {
         throw new Error('Method not implemented.');
     }
 

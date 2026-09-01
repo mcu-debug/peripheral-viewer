@@ -55,7 +55,7 @@ export class MessageNode extends PeripheralBaseNode {
         return undefined;
     }
 
-    public collectRanges(_ary: AddrRange[]): void {
+    public collectRanges(_ary: AddrRange[], _blocked: number[]): void {
         // Do nothing
     }
 

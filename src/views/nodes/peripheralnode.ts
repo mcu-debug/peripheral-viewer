@@ -142,10 +142,11 @@ export class PeripheralNode extends PeripheralBaseNode {
         try {
             const errors = await this.readMemory();
             for (const error of errors) {
-                const str = `Failed to update peripheral ${this.name}: ${error}`;
+                const str = (typeof error === 'object' && error !== null && 'message' in error) ? (error as Error).message : `${manifest.PACKAGE_NAME}: Unknown error`;
                 if (vscode.debug.activeDebugConsole) {
                     vscode.debug.activeDebugConsole.appendLine(str);
                 }
+                logToOutputWindow(str);
             }
         } catch (e) {
             /* This should never happen */
@@ -154,6 +155,7 @@ export class PeripheralNode extends PeripheralBaseNode {
             if (vscode.debug.activeDebugConsole) {
                 vscode.debug.activeDebugConsole.appendLine(str);
             }
+            logToOutputWindow(str);
         }
 
         try {
@@ -177,7 +179,7 @@ export class PeripheralNode extends PeripheralBaseNode {
         }
 
         if (this.session) {
-            return MemUtils.readMemoryChunks(this.session, this.baseAddress, this.addrRanges, this.currentValue);
+            return MemUtils.readMemoryChunks(this.session, this.baseAddress, this.addrRanges, this.currentValue, this.name);
         } else {
             return [];
         }
@@ -185,13 +187,11 @@ export class PeripheralNode extends PeripheralBaseNode {
 
     public collectRanges(): void {
         const addresses: AddrRange[] = [];
-        const blockedSet = new Set<number>();
-        this.children.forEach((child) => child.collectRanges(addresses, blockedSet));
+        const blocked: number[] = [];
+        this.children.forEach((child) => child.collectRanges(addresses, blocked));
         addresses.sort((a, b) => (a.base < b.base) ? -1 : ((a.base > b.base) ? 1 : 0));
         addresses.forEach((r) => r.base += this.baseAddress);
 
-        // Will be a very small set, so no point of sorting
-        const blockedArray = Array.from(blockedSet).map((b) => b + this.baseAddress);
         // Snapshot before alignment mutates the shared range objects
         const origAddresses = manifest.DEBUG_LEVEL > 1 ? addresses.map((r) => r.dup()) : [];
 
@@ -202,7 +202,7 @@ export class PeripheralNode extends PeripheralBaseNode {
             for (const r of addresses) {
                 if (last && ((last.nxtAddr() + maxGap) >= r.base)) {
                     const max = Math.max(last.nxtAddr(), r.nxtAddr());
-                    const ix = blockedArray.findIndex((b) => b >= last!.base && b < max);
+                    const ix = blocked.findIndex((b) => b >= last!.base && b < max);
                     if (ix >= 0) {
                         // A blocked address will be in the middle of this range, if merged. Start a new range here.
                         ranges.push(r);

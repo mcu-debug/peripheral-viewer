@@ -335,7 +335,7 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
         return this.parent.getPeripheral();
     }
 
-    public collectRanges(_a: AddrRange[]): void {
+    public collectRanges(_a: AddrRange[], _blocked: number[]): void {
         throw new Error('Method not implemented.');
     }
 

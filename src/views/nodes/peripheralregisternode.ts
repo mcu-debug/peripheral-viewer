@@ -328,26 +328,25 @@ export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
         return this.parent.getPeripheral();
     }
 
-    public collectRanges(addrs: AddrRange[], blocked: Set<number>): void {
+    public collectRanges(addrs: AddrRange[], blocked: number[]): void {
         const regOffset = this.parent.getOffset(this.offset);
         const trueParent = this.getPeripheral();        // Should get a PeripheralNode instance, but make sure it is actually one before using it as such
         const peripheral = trueParent instanceof PeripheralNode ? trueParent as PeripheralNode : undefined;
+        const addToBlocked = peripheral && peripheral.gapThreshold !== undefined && peripheral.gapThreshold >= 0;
         // a read action modifies the content of a register during read (e.g. pop FIFO),
         // see https://arm-software.github.io/CMSIS_5/SVD/html/elem_registers.html
         const avoidRead = (accessType: AccessType, readAction: ReadActionType | undefined, fieldName?: string): boolean => {
             if (readAction || accessType === AccessType.WriteOnly) {
-                if (peripheral && peripheral.gapThreshold && peripheral.gapThreshold > 0) {
+                const pName = peripheral?.name ?? 'unknown';
+                const rName = this.name + (fieldName ? `.${fieldName}` : '');
+                if (addToBlocked) {
                     if (blocked) {
-                        blocked.add(regOffset);
+                        blocked.push(regOffset);
                     } else {
-                        logToOutputWindow(`Bug? Blocked set is not available for peripheral ${peripheral.name} when avoiding read for register ${this.name}.`);
+                        logToOutputWindow(`Bug? Blocked set is not available for peripheral ${pName} when avoiding read for register ${this.name}.`);
                     }
-                    // Not only should we not read this register, we should also NOT combine non-adjacent ones, for the whole peripheral.
-                    // Adjacent ones are still okay to combine
-                    const pName = peripheral.name;
-                    const rName = this.name + (fieldName ? `.${fieldName}` : '');
-                    logToOutputWindow(`Peripheral ${pName} avoiding read due to register ${rName}. Will also break up memory reads at its address.`);
                 }
+                logToOutputWindow(`Peripheral ${pName} avoiding read due to register ${rName}. Will also break up memory reads at its address.`);
                 return true;
             }
             return false;
