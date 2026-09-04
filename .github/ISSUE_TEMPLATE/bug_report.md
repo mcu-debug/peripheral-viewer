@@ -17,10 +17,9 @@ Type: Bug Report
 **Describe the bug**
 - OS and Version:
 - VS Code Version:
-- Extension Version:
-- Debugger and Debugger Version:
+- Peripheral Viewer Extension Version:
+- Debugger Extension and Version: cortex-debug, etc.
 - Target Device:
-- Other extensions you installed (and if the issue persists after disabling them):
 - A clear and concise description of what the bug is.
 
 **To Reproduce**

@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [v1.6.4] - 2026-09-04
+- Issue #45: Refresh button did was not refreshing the window. Fixed. Although data was already refreshed, the view still had stale contents
+- Better message when reads get issued while target is not halted
+
 ## [v1.6.3] - 2026-09-01
 - Better logging for how addresses have been coalesced
 - Better caching of svdFile content based on settings and file modification time. Helps when you subsequent debug sessions

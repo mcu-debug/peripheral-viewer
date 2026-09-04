@@ -73,13 +73,16 @@ export class Commands {
 
     private async peripheralsForceRefresh(node?: PeripheralBaseNode): Promise<void> {
         if (node) {
-            const p = node.getPeripheral();
-            if (p) {
-                await p.updateData();
+            const peripheral = node.getPeripheral();
+            if (peripheral) {
+                await peripheral.updateData();
+            } else {
+                await this.peripheralProvider.updateData();
             }
         } else {
-            this.peripheralProvider.updateData();
+            await this.peripheralProvider.updateData();
         }
+        this.peripheralProvider.refresh();
     }
 
     private peripheralsTogglePin(node: PeripheralBaseNode): void {

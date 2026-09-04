@@ -58,7 +58,7 @@ export class MemUtils {
                 errors.push(new Error(`${manifest.PACKAGE_NAME}: readMemory failed @ ${memoryReference} for ${request.count} bytes: ${err}, block=${name}`));
                 if ((typeof e === 'object' && e !== null) && 'message' in e && (typeof e.message === 'string')) {
                     if (['notstopped', 'busy'].includes((e as Error).message.toLowerCase())) {
-                        errors.push(new Error(`${manifest.PACKAGE_NAME}: responded with notstopped or busy error, ignoring, Aborting read for ${name}`));
+                        errors.push(new Error(`${manifest.PACKAGE_NAME}: responded with notstopped or busy error (probably because the target is not halted), ignoring, Aborting read for ${name} for now, can try again on next pause`));
                         break;
                     }
                 }
