@@ -21,6 +21,7 @@ import * as manifest from './manifest';
 import { PeripheralBaseNode } from './views/nodes/basenode';
 import { PeripheralTreeProvider } from './views/peripheral';
 import { NumberFormat } from './common';
+import { MemUtils } from './memutils';
 
 export class Commands {
     public constructor(protected peripheralProvider: PeripheralTreeProvider) {
@@ -74,6 +75,12 @@ export class Commands {
     private async peripheralsForceRefresh(node?: PeripheralBaseNode): Promise<void> {
         if (node) {
             const peripheral = node.getPeripheral();
+            const session = peripheral?.session;
+            if (!session || !MemUtils.isStopped(session)) {
+                const sessionName = session?.name || 'Unknown session';
+                vscode.window.showInformationMessage(`Debug session "${sessionName}" is not in a stopped state or not available`);
+                return;
+            }
             if (peripheral) {
                 await peripheral.updateData();
             } else {

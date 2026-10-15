@@ -143,7 +143,7 @@ export class PeripheralNode extends PeripheralBaseNode {
             const errors = await this.readMemory();
             for (const error of errors) {
                 const str = (typeof error === 'object' && error !== null && 'message' in error) ? (error as Error).message : `${manifest.PACKAGE_NAME}: Unknown error`;
-                if (vscode.debug.activeDebugConsole) {
+                if (vscode.debug.activeDebugConsole && manifest.DEBUG_LEVEL > 1) {
                     vscode.debug.activeDebugConsole.appendLine(str);
                 }
                 logToOutputWindow(str);
@@ -239,7 +239,7 @@ export class PeripheralNode extends PeripheralBaseNode {
         const maxBytes = manifest.MAX_READ_SIZE;
         this.addrRanges = AddressRangesUtils.splitIntoChunks(ranges, maxBytes, this.name, this.totalLength);
         if (this.gapThreshold > -1) {
-            logToOutputWindow(`${this.name}: Raw ranges = ${addresses.length}, Processed ranges = ${this.addrRanges.length}, Gap threshold = ${this.gapThreshold}`);
+            logToOutputWindow(`${this.name}: Raw ranges = ${origAddresses.length}, Processed ranges = ${this.addrRanges.length}, Gap threshold = ${this.gapThreshold}`);
             if (manifest.DEBUG_LEVEL > 1) {
                 const fmt = (r: AddrRange) => `${hexFormat(r.base)}/${r.length}`;
                 logToOutputWindow(`    Original :${origAddresses.map(fmt).join(' ')}`);

@@ -20,9 +20,14 @@ import * as vscode from 'vscode';
 import type { DebugProtocol } from '@vscode/debugprotocol';
 import { AddrRange, AddressRangesUtils } from './addrranges';
 import * as manifest from './manifest';
+import { logToOutputWindow } from './vscode-utils';
+import { PeripheralTreeProvider, SessionState } from './views/peripheral';
 
 /** Has utility functions to read memory in chunks into a storage space */
 export class MemUtils {
+    public static isStopped(session: vscode.DebugSession): boolean {
+        return PeripheralTreeProvider.sessionState.get(session.id) === SessionState.paused;
+    }
     /**
      * Make one or more memory reads and update values. For the caller, it should look like a single
      * memory read but, if one read fails, all reads are considered as failed.
@@ -31,11 +36,19 @@ export class MemUtils {
      * @param specs The chunks of memory to read and and update. Addresses should be >= `startAddr`, Can have gaps, overlaps, etc.
      * @param storeTo This is where read-results go. The first element represents item at `startAddr`
      */
+    static dryRun = false;
     public static async readMemoryChunks(
         session: vscode.DebugSession, startAddr: number, specs: AddrRange[], storeTo: Uint8Array, name?: string): Promise<Error[]> {
         const errors: Error[] = [];
         name = name || 'this memory chunk';
+        const busyError = () => {
+            errors.push(new Error(`${manifest.PACKAGE_NAME}: responded with notstopped or busy error (probably because the target is not halted), ignoring, Aborting read for ${name} for now, can try again on next pause`));
+        };
         for (const spec of specs) {
+            if (!MemUtils.isStopped(session)) {
+                // Check start of every entry if the session is running
+                return errors;
+            }
             const memoryReference = '0x' + spec.base.toString(16);
             const request: DebugProtocol.ReadMemoryArguments = {
                 memoryReference,
@@ -43,22 +56,39 @@ export class MemUtils {
             };
 
             try {
+                if (MemUtils.dryRun) {
+                    logToOutputWindow(`Dry run: would read memory @ ${memoryReference} for ${request.count} bytes, block=${name}`);
+                    const dst = spec.base - startAddr;
+                    for (let i = 0; i < spec.length; i++) {
+                        storeTo[dst + i] = Math.floor(Math.random() * 256);
+                    }
+                    continue;
+                }
                 const responseBody = await session.customRequest('readMemory', request);
+                if (!MemUtils.isStopped(session)) {
+                    // Check right after awaiting the readMemory response if the session is running. Should be if we succeeded
+                    return errors;
+                }
                 if (responseBody && responseBody.data) {
                     const bytes = Buffer.from(responseBody.data, 'base64');
                     let dst = spec.base - startAddr;
                     for (const byte of bytes) {
                         storeTo[dst++] = byte;
                     }
+                } else if ((responseBody?.message || '').toLowerCase() === 'notstopped') {
+                    // No idea what other debuggers do
+                    busyError();
+                    break;
                 } else {
                     errors.push(new Error(`peripheral-viewer: readMemory failed @ ${memoryReference} for ${request.count} bytes: No data returned, block=${name}`));
                 }
             } catch (e: unknown) {
-                const err = e ? e.toString() : 'Unknown error';
+                const err = (e ? e.toString() : 'Unknown error').replace(/CodeExpectedError:\s*/i, '');
                 errors.push(new Error(`${manifest.PACKAGE_NAME}: readMemory failed @ ${memoryReference} for ${request.count} bytes: ${err}, block=${name}`));
                 if ((typeof e === 'object' && e !== null) && 'message' in e && (typeof e.message === 'string')) {
                     if (['notstopped', 'busy'].includes((e as Error).message.toLowerCase())) {
-                        errors.push(new Error(`${manifest.PACKAGE_NAME}: responded with notstopped or busy error (probably because the target is not halted), ignoring, Aborting read for ${name} for now, can try again on next pause`));
+                        // This will work for cortex-debug and mcu-debug
+                        busyError();
                         break;
                     }
                 }

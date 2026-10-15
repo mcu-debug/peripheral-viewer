@@ -26,12 +26,19 @@ import { AddrRange } from '../addrranges';
 import { DebugTrackerWrapper } from '../debug-tracker-wrapper';
 import { PeripheralRegisterNode } from './nodes/peripheralregisternode';
 import { PeripheralsProvider, setGlobalSettings } from '../peripherals-provider';
+import { MemUtils } from '../memutils';
 
 const traceExec = false;
 
 interface CachedSVDFile {
     cacheKey: vscode.Uri | string;
     peripherials: PeripheralNode[]
+}
+
+export enum SessionState {
+    initialized = 'initialized',
+    running = 'running',
+    paused = 'paused',
 }
 
 export class PeripheralTreeForSession extends PeripheralBaseNode {
@@ -240,6 +247,7 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
     public readonly onDidChangeTreeData: vscode.Event<PeripheralBaseNode | undefined> = this._onDidChangeTreeData.event;
     protected sessionPeripheralsMap = new Map<string, PeripheralTreeForSession>();
     protected oldState = new Map<string, vscode.TreeItemCollapsibleState>();
+    public static sessionState: Map<string, SessionState> = new Map();
 
     constructor(tracker: DebugTrackerWrapper, protected context: vscode.ExtensionContext) {
         tracker.onWillStartSession(session => this.debugSessionStarted(session));
@@ -281,7 +289,9 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
     public async updateData(): Promise<void> {
         const trees = this.sessionPeripheralsMap.values();
         for (const tree of trees) {
-            await tree.updateData();
+            if (MemUtils.isStopped(tree.session)) {
+                await tree.updateData();
+            }
         }
 
         this.refresh();
@@ -308,7 +318,7 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
         if (traceExec && vscode.debug.activeDebugConsole) {
             vscode.debug.activeDebugConsole.appendLine('peripheral-viewer: ' + session.id + ': Session Started');
         }
-
+        PeripheralTreeProvider.sessionState.set(session.id, SessionState.initialized);
         const wsFolderPath = session.workspaceFolder ? session.workspaceFolder.uri : vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders[0].uri;
         const provider = new PeripheralsProvider(session, this.context);
         const cacheKey = await provider.cacheKeyString();
@@ -352,6 +362,7 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
     }
 
     public debugSessionTerminated(session: vscode.DebugSession): void {
+        PeripheralTreeProvider.sessionState.delete(session.id);
         if (!this.sessionPeripheralsMap.get(session.id)) {
             return;
         }
@@ -374,6 +385,7 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
 
     private stopedTimer: NodeJS.Timeout | undefined;
     public debugStopped(session: vscode.DebugSession): void {
+        PeripheralTreeProvider.sessionState.set(session.id, SessionState.paused);
         if (!this.sessionPeripheralsMap.get(session.id)) {
             return;
         }
@@ -394,6 +406,7 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
     }
 
     public debugContinued(session: vscode.DebugSession): void {
+        PeripheralTreeProvider.sessionState.set(session.id, SessionState.running);
         if (!this.sessionPeripheralsMap.get(session.id)) {
             return;
         }

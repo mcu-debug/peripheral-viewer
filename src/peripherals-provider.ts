@@ -6,6 +6,7 @@ import { SvdData, SVDParser } from './svd-parser';
 import { parseStringPromise } from 'xml2js';
 import { readFromUrl } from './utils';
 import { SvdRegistry } from './svd-registry';
+import { MemUtils } from './memutils';
 
 const pathToUri = (path: string): vscode.Uri => {
     try {
@@ -64,10 +65,12 @@ export function setGlobalSettings() {
     const maxReadSize = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<number>(manifest.CONFIG_MAX_READ_SIZE) ?? manifest.DEFAULT_MAX_READ_SIZE;
     const alignment = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<number>(manifest.CONFIG_ALIGNMENT) ?? manifest.DEFAULT_ALIGNMENT;
     const dbgLevel = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<number>(manifest.CONFIG_DEBUG_LEVEL) ?? manifest.DEFAULT_DEBUG_LEVEL;
+    const dryRun = vscode.workspace.getConfiguration(manifest.PACKAGE_NAME).get<boolean>(manifest.CONFIG_DRYRUN) ?? manifest.DEFAULT_DRYRUN;
     manifest.setMaxReadSize(maxReadSize);
     manifest.setAlignment(alignment);
     manifest.setAddrGapThreshold(thresh);
     manifest.setDebugLevel(dbgLevel);
+    MemUtils.dryRun = dryRun;
 }
 
 export class PeripheralsProvider {

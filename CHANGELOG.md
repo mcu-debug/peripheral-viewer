@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [v1.6.5] - 2026-09-08
+- Added more diagnostic information for "write-only" registers
+- Added a hidden feature to run the viewer in `dryRun` mode where no actual register reads are done and random bytes are simulated instead. This can be enabled in your settings - `"mcu-debug.peripheral-viewer.dryRun": true`
+
 ## [v1.6.4] - 2026-09-04
 - Issue #45: Refresh button did was not refreshing the window. Fixed. Although data was already refreshed, the view still had stale contents
 - Better message when reads get issued while target is not halted

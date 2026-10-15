@@ -56,6 +56,7 @@ export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
     private binaryRegex: RegExp;
     private currentValue: number;
     private prevValue = '';
+    private disabled: boolean;
 
     constructor(public parent: PeripheralNode | PeripheralClusterNode, options: PeripheralRegisterOptions) {
         super(parent);
@@ -68,6 +69,7 @@ export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
         this.resetValue = options.resetValue !== undefined ? options.resetValue : parent.resetValue;
         this.currentValue = this.resetValue;
         this.readAction = options.readAction;
+        this.disabled = false;
 
         this.hexLength = Math.ceil(this.size / 4);
 
@@ -80,6 +82,10 @@ export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
         for (const field of options.fields || []) {
             new PeripheralFieldNode(this, field);
         }
+    }
+
+    public isDisabled(): boolean {
+        return this.disabled;
     }
 
     public reset(): void {
@@ -150,7 +156,8 @@ export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
         mds.appendMarkdown('\n_____\n\n');
 
         // Don't try to display current value table for write only fields
-        if (this.accessType === AccessType.WriteOnly) {
+        if (this.accessType === AccessType.WriteOnly || this.isDisabled()) {
+            mds.appendMarkdown('Parent register is disabled (write-only or not accessible)\n');
             return mds;
         }
 
@@ -178,10 +185,16 @@ export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
     }
 
     public getFormattedValue(format: NumberFormat): string {
+        if (this.isDisabled()) {
+            return '(Read Disabled)';
+        }
         return this.formatValue(this.currentValue, format);
     }
 
     public getFormattedResetValue(format: NumberFormat): string {
+        if (this.isDisabled()) {
+            return '(Read Disabled)';
+        }
         return this.formatValue(this.resetValue, format);
     }
 
@@ -277,6 +290,10 @@ export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
     }
 
     public updateData(): Thenable<boolean> {
+        if (this.disabled) {
+            this.currentValue = this.resetValue;
+            return Promise.resolve(true);
+        }
         const bc = this.size / 8;
         const bytes = this.parent.getBytes(this.offset, bc);
         const buffer = Buffer.from(bytes);
@@ -337,8 +354,10 @@ export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
         // see https://arm-software.github.io/CMSIS_5/SVD/html/elem_registers.html
         const avoidRead = (accessType: AccessType, readAction: ReadActionType | undefined, fieldName?: string): boolean => {
             if (readAction || accessType === AccessType.WriteOnly) {
+                this.disabled = true;
                 const pName = peripheral?.name ?? 'unknown';
                 const rName = this.name + (fieldName ? `.${fieldName}` : '');
+                const cause = readAction ? `read action ${readAction}` : 'write-only access';
                 if (addToBlocked) {
                     if (blocked) {
                         blocked.push(regOffset);
@@ -346,7 +365,7 @@ export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
                         logToOutputWindow(`Bug? Blocked set is not available for peripheral ${pName} when avoiding read for register ${this.name}.`);
                     }
                 }
-                logToOutputWindow(`Peripheral ${pName} avoiding read due to register ${rName}. Will also break up memory reads at its address.`);
+                logToOutputWindow(`Peripheral register ${pName}.${rName}, offset=${regOffset} will not be read due to ${cause}. Will also break up bulk memory reads at its address.`);
                 return true;
             }
             return false;
@@ -357,7 +376,7 @@ export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
 
         // If remaining bytes should be read, analyze via BitRange type
         for (const child of this.children) {
-            if (avoidRead(child.accessType, child.readAction)) {
+            if (avoidRead(child.accessType, child.readAction, child.name)) {
                 return;
             }
         }
